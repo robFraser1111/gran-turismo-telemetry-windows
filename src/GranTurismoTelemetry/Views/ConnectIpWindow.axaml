@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GranTurismoTelemetry.ViewModels"
+             x:Class="GranTurismoTelemetry.Views.ConnectIpWindow"
+             x:DataType="vm:MainViewModel">
+    <Border Background="#CC0B1220">
+        <Border Classes="Card" Width="520" MinHeight="360" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="28">
+            <StackPanel Spacing="14">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Done" Command="{Binding CloseConnectIpCommand}"
+                            Background="Transparent" BorderThickness="0" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold"/>
+                    <TextBlock Text="Connect to IP" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextBrush}"/>
+                </DockPanel>
+                <TextBlock Text="Heartbeat goes to this PlayStation on UDP 33739. Listen on 33740."
+                           FontSize="12" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"/>
+                <TextBlock Classes="Caps" Text="PS5 IP"/>
+                <Grid ColumnDefinitions="*,12,128,8,128">
+                    <TextBox Text="{Binding Settings.Ps5IP}" Watermark="192.168.1.42" Padding="10,8"/>
+                    <Button Grid.Column="2" Classes="Connect" Height="40" Content="{Binding ConnectButtonText}"
+                            Command="{Binding ConnectFromIpCommand}" IsEnabled="{Binding CanConnect}"/>
+                    <Button Grid.Column="4" Classes="Secondary" Height="40" Content="Disconnect"
+                            Command="{Binding DisconnectCommand}" IsEnabled="{Binding CanDisconnect}"/>
+                </Grid>
+                <Border Classes="Well" Padding="16,14" MinHeight="132">
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="Caps" Text="CONNECTION RESPONSE"/>
+                        <DockPanel MinHeight="28">
+                            <Ellipse Width="10" Height="10" Fill="{Binding ConnectOverlayBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding ConnectOverlayStatus}" FontSize="16" FontWeight="Bold"
+                                       Foreground="{Binding ConnectOverlayBrush}" TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <TextBlock Text="{Binding ConnectIpDetail}" FontSize="12" Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap" MinHeight="36"/>
+                        <TextBlock Text="{Binding QualityMetricsText}" FontSize="12" FontWeight="Medium"
+                                   Foreground="{StaticResource MutedBrush}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+    </Border>
+</UserControl>

@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GranTurismoTelemetry.ViewModels"
+             xmlns:ctrl="using:GranTurismoTelemetry.Controls"
+             x:Class="GranTurismoTelemetry.Views.SimpleView"
+             x:DataType="vm:MainViewModel">
+    <DockPanel Background="{StaticResource PageBrush}">
+        <Border DockPanel.Dock="Top" Height="3" Background="{StaticResource CyanBrush}"/>
+        <Border DockPanel.Dock="Top" Background="{StaticResource HeaderBrush}" Padding="20,10" Height="52">
+            <DockPanel>
+                <Border DockPanel.Dock="Left" Background="{Binding LivePillBackground}" CornerRadius="11"
+                        Padding="14,3" Margin="0,0,12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding LiveBadgeText}" FontSize="11" FontWeight="Bold" LetterSpacing="1"
+                               Foreground="{Binding LivePillForeground}"/>
+                </Border>
+                <TextBlock DockPanel.Dock="Right" Text="Simple" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{StaticResource CyanBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding TrackName}" FontSize="16" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
+        </Border>
+
+        <Grid Margin="16" RowDefinitions="Auto,12,*">
+            <Border Classes="Card">
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="Caps" Text="FUEL — THIS SESSION"/>
+                    <TextBlock Text="{Binding FuelPercentText}" FontSize="40" FontWeight="Bold"
+                               Foreground="{StaticResource TextBrush}"/>
+                    <ctrl:FuelBarControl Height="12" Percent="{Binding FuelPercent}"/>
+                    <TextBlock Text="{Binding FuelPerLapText}" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextBrush}"/>
+                    <TextBlock Text="{Binding FuelLapsRemainingText}" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextBrush}"/>
+                    <TextBlock Text="{Binding PredictedStopsText}" FontSize="13"
+                               Foreground="{StaticResource MutedBrush}"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Row="2" Classes="Card">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="Caps" Text="TIRE TEMPS" Margin="0,0,0,8"/>
+                    <Grid ColumnDefinitions="*,12,*" RowDefinitions="*,12,*">
+                        <Border Classes="Well">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Classes="Caps" Text="FL" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding TireFLC}" FontSize="28" FontWeight="Bold"
+                                           Foreground="{Binding TireFLBrush}"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                            </DockPanel>
+                        </Border>
+                        <Border Classes="Well" Grid.Column="2">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Classes="Caps" Text="FR" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding TireFRC}" FontSize="28" FontWeight="Bold"
+                                           Foreground="{Binding TireFRBrush}"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                            </DockPanel>
+                        </Border>
+                        <Border Classes="Well" Grid.Row="2">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Classes="Caps" Text="RL" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding TireRLC}" FontSize="28" FontWeight="Bold"
+                                           Foreground="{Binding TireRLBrush}"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                            </DockPanel>
+                        </Border>
+                        <Border Classes="Well" Grid.Row="2" Grid.Column="2">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Classes="Caps" Text="RR" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding TireRRC}" FontSize="28" FontWeight="Bold"
+                                           Foreground="{Binding TireRRBrush}"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                            </DockPanel>
+                        </Border>
+                    </Grid>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</UserControl>

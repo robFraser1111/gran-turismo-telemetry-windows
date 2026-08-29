@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GranTurismoTelemetry.ViewModels"
+             x:Class="GranTurismoTelemetry.Views.DebugWindow"
+             x:DataType="vm:MainViewModel">
+    <Border Background="#CC0B1220">
+        <Border Classes="Card" Width="520" MinHeight="340" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="28">
+            <StackPanel Spacing="14">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Done" Command="{Binding CloseDebugCommand}"
+                            Background="Transparent" BorderThickness="0" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold"/>
+                    <TextBlock Text="Debug" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextBrush}"/>
+                </DockPanel>
+                <TextBlock Classes="Caps" Text="SOURCE"/>
+                <DockPanel LastChildFill="True">
+                    <CheckBox DockPanel.Dock="Right" IsChecked="{Binding Settings.UseSimulator}"
+                              Content="" Click="OnSimToggle" Margin="24,0,0,0" VerticalAlignment="Center"
+                              MinWidth="32" MinHeight="32"/>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Simulator telemetry" FontWeight="Medium" Foreground="{StaticResource TextBrush}"/>
+                        <TextBlock Text="Off by default. Turn it on for fake packets, or use File → Find PS5 / Connect to IP for a real console."
+                                   FontSize="12" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+                <TextBlock Classes="Caps" Text="DIAGNOSTICS" Margin="0,4,0,0"/>
+                <DockPanel>
+                    <TextBlock Text="Decoded" Foreground="{StaticResource MutedBrush}" FontSize="13"/>
+                    <TextBlock Text="{Binding DecodedText}" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Right"/>
+                </DockPanel>
+                <DockPanel>
+                    <TextBlock Text="Raw UDP" Foreground="{StaticResource MutedBrush}" FontSize="13"/>
+                    <TextBlock Text="{Binding RawUdpText}" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Right"/>
+                </DockPanel>
+                <DockPanel>
+                    <TextBlock Text="Decode fails" Foreground="{StaticResource MutedBrush}" FontSize="13"/>
+                    <TextBlock Text="{Binding DecodeFailsText}" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Right"/>
+                </DockPanel>
+                <TextBlock Text="{Binding LastDecodeError}" FontSize="12" Foreground="{StaticResource MutedBrush}"
+                           TextWrapping="Wrap" IsVisible="{Binding HasDecodeError}" MinHeight="16"/>
+            </StackPanel>
+        </Border>
+    </Border>
+</UserControl>
