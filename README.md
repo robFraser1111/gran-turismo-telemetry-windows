@@ -12,6 +12,25 @@ A single resizable window. **Simple is the default**, including when maximized. 
 
 Palette: page `#0B1220`, cards `#111A2B`, cyan `#22D3EE`, green `#22C55E`, red `#EF4444`, amber `#F59E0B`.
 
+## Screenshots
+
+Refresh `docs/screenshots/` whenever a view's design or layout changes, then update this section if the filenames change.
+
+Simulated session so the panes have data. Swap in a live Simple + HUD shot when we have one.
+
+### Simple
+
+![Simple view](docs/screenshots/simple.png)
+
+### Driving
+
+![Driving view](docs/screenshots/driving.png)
+
+### Pit wall
+
+![Pit wall view](docs/screenshots/pit-wall.png)
+
+
 Avalonia is used so this project **builds on Linux** as well as Windows. WinUI 3 cannot compile here.
 
 ## Build / run / publish
