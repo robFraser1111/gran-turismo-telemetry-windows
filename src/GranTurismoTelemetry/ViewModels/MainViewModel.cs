@@ -255,7 +255,7 @@ public partial class MainViewModel : ViewModelBase
     public IBrush TireRRBrush => GTTheme.TireBrush(Packet.TireTempRR);
 
     public IReadOnlyList<LapRow> LapRows => Telemetry.Session.Laps;
-    public IReadOnlyList<LapRow> RecentLapRows => LapRows.Take(8).ToList();
+    public IReadOnlyList<LapRow> RecentLapRows => LapRows.Take(SessionTracker.MaxLaps).ToList();
 
     public string DecodedText => Telemetry.DecodedPackets.ToString();
     public string RawUdpText => Telemetry.RawPackets.ToString();

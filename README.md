@@ -8,7 +8,7 @@ A single resizable window. **Simple is the default**, including when maximized. 
 |------|--------|
 | **Simple** (default) | HUD-on: tire temps (fills leftover height) + fuel only. No gear, chips, or map. |
 | **Driving** | HUD-off replica dash: gear/speed/RPM, delta, throttle/brake traces, tires (fills leftover height), fuel. |
-| **Pit wall** | Delta trace + gear/speed (one RPM strip); last/best, tires, last-8 lap table (fills leftover); delta vs best, fuel. Find PS5 is File-menu only. No map. |
+| **Pit wall** | Delta trace + gear/speed (one RPM strip); last/best, tires, last-100 this-session lap table (scrolls in the right pane); delta vs best, fuel. Find PS5 is File-menu only. No map. |
 
 Palette: page `#0B1220`, cards `#111A2B`, cyan `#22D3EE`, green `#22C55E`, red `#EF4444`, amber `#F59E0B`.
 
@@ -81,7 +81,7 @@ Status: amber = waiting, green = Connected + IP. Packet counters (`rx` / `dec` /
 
 ## Live this-session only
 
-Shown: tire temps (no wear); fuel % remaining, %/lap, laps remaining, predicted stops; gear/speed/shift (Driving + Pit wall); delta vs this-session best, last/best; throttle/brake traces (Driving); this-session last-8 lap table (Pit wall).
+Shown: tire temps (no wear); fuel % remaining, %/lap, laps remaining, predicted stops; gear/speed/shift (Driving + Pit wall); delta vs this-session best, last/best; throttle/brake traces (Driving); this-session last-100 lap table (Pit wall, scrolls when the pane is full).
 
 Not shown: track map, past-session history UI, audio/TTS, TCS/ASM on the driving HUD, packet counters on the HUD, WINDOW OPEN badge, on-canvas mode chips, session notes. No fake Custom Pro lock.
 
