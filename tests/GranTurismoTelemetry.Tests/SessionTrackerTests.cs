@@ -77,6 +77,44 @@ public class SessionTrackerTests
     }
 
     [Fact]
+    public void PauseFreezesSessionWhileJunkPacketsKeepArriving()
+    {
+        var s = new SessionTracker();
+        s.Ingest(Racing(5, 85_000, 84_000, 42));
+        s.Ingest(Racing(6, 84_500, 84_000, 39.9));
+
+        int laps = s.LapsInMemory;
+        int best = s.SessionBestMs;
+        int last = s.LastLapMs;
+        double fuelPerLap = s.FuelPercentPerLap;
+        double fuelLeft = s.FuelLapsRemaining;
+        int stops = s.PredictedStops;
+        bool window = s.WindowOpen;
+        Assert.True(laps > 0);
+
+        var paused = Racing(99, 12_000, 0, 0);
+        paused.Flags = SimulatorFlags.CarOnTrack | SimulatorFlags.Paused;
+        s.Ingest(paused);
+        s.Ingest(paused);
+
+        Assert.Equal(laps, s.LapsInMemory);
+        Assert.Equal(best, s.SessionBestMs);
+        Assert.Equal(last, s.LastLapMs);
+        Assert.Equal(fuelPerLap, s.FuelPercentPerLap);
+        Assert.Equal(fuelLeft, s.FuelLapsRemaining);
+        Assert.Equal(stops, s.PredictedStops);
+        Assert.Equal(window, s.WindowOpen);
+        Assert.Equal(0, s.LiveDeltaSeconds);
+
+        var resume = Racing(6, 84_500, 84_000, 39.9);
+        resume.LapProgress = 0.4;
+        s.Ingest(resume);
+        Assert.Equal(laps, s.LapsInMemory);
+        Assert.Equal(best, s.SessionBestMs);
+        Assert.Equal(last, s.LastLapMs);
+    }
+
+    [Fact]
     public void SeedThenRelabelMarksLatest()
     {
         var s = new SessionTracker();
@@ -95,5 +133,17 @@ public class SessionTrackerTests
         FuelCapacity = capacity,
         TotalLaps = 20,
         LapProgress = 0.01,
+    };
+
+    private static TelemetryPacket Racing(int lap, int lastMs, int bestMs, double fuel) => new()
+    {
+        CurrentLap = lap,
+        LastLapMs = lastMs,
+        BestLapMs = bestMs,
+        FuelLevel = (float)fuel,
+        FuelCapacity = 100,
+        TotalLaps = 20,
+        LapProgress = 0.01,
+        Flags = SimulatorFlags.CarOnTrack,
     };
 }
