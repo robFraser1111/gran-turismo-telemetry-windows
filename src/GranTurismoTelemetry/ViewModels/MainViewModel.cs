@@ -208,11 +208,11 @@ public partial class MainViewModel : ViewModelBase
     public double RpmFraction => IsRacing ? Packet.RpmFraction : 0;
     public string DeltaText => Formatters.Delta(IsRacing ? Packet.LiveDeltaSeconds : 0);
     public IBrush DeltaBrush => GTTheme.DeltaBrush(IsRacing ? Packet.LiveDeltaSeconds : 0);
-    public string LastLapText => "LAST " + Formatters.LapTime(Packet.LastLapMs > 0 ? Packet.LastLapMs : Telemetry.Session.LastLapMs);
-    public string BestLapText => "BEST " + Formatters.LapTime(SessionBestMs);
-    public string LastLapValue => Formatters.LapTime(Packet.LastLapMs > 0 ? Packet.LastLapMs : Telemetry.Session.LastLapMs);
-    public string BestLapValue => Formatters.LapTime(SessionBestMs);
-    public int SessionBestMs => Telemetry.Session.SessionBestMs > 0 ? Telemetry.Session.SessionBestMs : Packet.BestLapMs;
+    public string LastLapText => "LAST " + Formatters.LapTime(Telemetry.Session.LastLapMs);
+    public string BestLapText => "BEST " + Formatters.LapTime(Telemetry.Session.SessionBestMs);
+    public string LastLapValue => Formatters.LapTime(Telemetry.Session.LastLapMs);
+    public string BestLapValue => Formatters.LapTime(Telemetry.Session.SessionBestMs);
+    public int SessionBestMs => Telemetry.Session.SessionBestMs;
     public string LapsInMemoryText => $"{Telemetry.Session.LapsInMemory}";
     public string DrivingStatus => $"{HudModeLabel} · Live";
     public IBrush LivePillBackground => Connection.IsLive ? GTTheme.GreenBrush : GTTheme.InsetBrush;

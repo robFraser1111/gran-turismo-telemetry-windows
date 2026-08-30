@@ -139,6 +139,29 @@ public class Salsa20ParserTests
         Assert.Equal(oiv, BinaryPrimitives.ReadUInt32LittleEndian(nonce.Slice(4, 4)));
     }
 
+    [Fact]
+    public void ParseConstructedPacketAReadsLapFlagsAndCarCode()
+    {
+        var src = new TelemetryPacket
+        {
+            CurrentLap = 4,
+            LastLapMs = 85_000,
+            BestLapMs = 84_000,
+            Flags = SimulatorFlags.CarOnTrack,
+            CarCode = 42,
+            PacketId = 99,
+        };
+        var bytes = src.Serialize(296);
+        Assert.Equal(296, bytes.Length);
+        var parsed = TelemetryPacket.Parse(bytes);
+        Assert.Equal(4, parsed.CurrentLap);
+        Assert.Equal(85_000, parsed.LastLapMs);
+        Assert.Equal(84_000, parsed.BestLapMs);
+        Assert.Equal(SimulatorFlags.CarOnTrack, parsed.Flags);
+        Assert.Equal(42, parsed.CarCode);
+        Assert.Equal(99, parsed.PacketId);
+    }
+
     private static void WriteF32(byte[] buf, int offset, float value) =>
         BinaryPrimitives.WriteSingleLittleEndian(buf.AsSpan(offset, 4), value);
 }

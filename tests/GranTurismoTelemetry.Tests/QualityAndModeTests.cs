@@ -204,4 +204,42 @@ public class QualityAndModeTests
         Assert.Empty(vm.LapRows);
         Assert.Empty(vm.RecentLapRows);
     }
+
+    [Fact]
+    public void LastAndBestStayDashesUntilLocalRecordLap()
+    {
+        var telemetry = new TelemetryService();
+        var vm = new MainViewModel(new AppSettings(), telemetry);
+        Assert.Equal("–.–––", vm.LastLapValue);
+        Assert.Equal("–.–––", vm.BestLapValue);
+        Assert.Equal(0, vm.SessionBestMs);
+
+        telemetry.Session.Ingest(new TelemetryPacket
+        {
+            CurrentLap = 1,
+            LastLapMs = 80_000,
+            BestLapMs = 70_000,
+            FuelLevel = 50,
+            FuelCapacity = 100,
+            Flags = SimulatorFlags.CarOnTrack,
+        });
+        Assert.Equal("–.–––", vm.LastLapValue);
+        Assert.Equal("–.–––", vm.BestLapValue);
+        Assert.Equal(0, vm.SessionBestMs);
+
+        telemetry.Session.Ingest(new TelemetryPacket
+        {
+            CurrentLap = 2,
+            LastLapMs = 90_000,
+            BestLapMs = 70_000,
+            FuelLevel = 47,
+            FuelCapacity = 100,
+            Flags = SimulatorFlags.CarOnTrack,
+        });
+        Assert.Equal("1:30.000", vm.LastLapValue);
+        Assert.Equal("1:30.000", vm.BestLapValue);
+        Assert.Equal(90_000, vm.SessionBestMs);
+        Assert.Equal("LAST 1:30.000", vm.LastLapText);
+        Assert.Equal("BEST 1:30.000", vm.BestLapText);
+    }
 }

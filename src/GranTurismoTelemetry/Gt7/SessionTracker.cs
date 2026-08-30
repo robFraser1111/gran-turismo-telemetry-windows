@@ -3,7 +3,8 @@ using GranTurismoTelemetry.Models;
 namespace GranTurismoTelemetry.Gt7;
 
 /// <summary>
-/// In-memory this-session lap table and derived fuel estimates. No past-session history.
+/// In-memory this-app-stint lap table and derived fuel estimates.
+/// Best/Last come only from locally recorded laps — never GT7 packet PB/last.
 /// </summary>
 public sealed class SessionTracker
 {
@@ -11,7 +12,10 @@ public sealed class SessionTracker
 
     private readonly List<LapRow> _laps = [];
     private readonly List<double> _fuelPerLap = [];
-    private int _lastCurrentLap = -1;
+    private int _lastCurrentLap;
+    private bool _attached;
+    private int _carCode;
+    private bool _hasCarCode;
     private int _lastLapMsSeen;
     private double _fuelAtLapStart = -1;
     private long _lapStartTick = Environment.TickCount64;
@@ -32,7 +36,10 @@ public sealed class SessionTracker
     {
         _laps.Clear();
         _fuelPerLap.Clear();
-        _lastCurrentLap = -1;
+        _lastCurrentLap = 0;
+        _attached = false;
+        _carCode = 0;
+        _hasCarCode = false;
         _lastLapMsSeen = 0;
         _fuelAtLapStart = -1;
         _lapStartTick = Environment.TickCount64;
@@ -73,6 +80,19 @@ public sealed class SessionTracker
             return;
         }
 
+        // New stint: different car, or CurrentLap dropped (new race, typically 8->1).
+        // After Reset this packet is a fresh attach. Do not store CurrentLap < 0.
+        if (_hasCarCode && pkt.CarCode != _carCode)
+            Reset();
+        else if (_attached && pkt.CurrentLap >= 0 && pkt.CurrentLap < _lastCurrentLap)
+            Reset();
+
+        if (!_hasCarCode)
+        {
+            _carCode = pkt.CarCode;
+            _hasCarCode = true;
+        }
+
         if (_pauseStartedTick != 0)
         {
             _lapStartTick += Environment.TickCount64 - _pauseStartedTick;
@@ -86,34 +106,33 @@ public sealed class SessionTracker
 
         double fuelPct = pkt.FuelPercent;
 
-        if (_lastCurrentLap < 0)
+        if (pkt.CurrentLap >= 0)
         {
-            _lastCurrentLap = pkt.CurrentLap;
-            _lastLapMsSeen = pkt.LastLapMs;
-            _fuelAtLapStart = fuelPct;
-            _lapStartTick = Environment.TickCount64;
-            LastLapMs = pkt.LastLapMs;
+            if (!_attached)
+            {
+                _attached = true;
+                _lastCurrentLap = pkt.CurrentLap;
+                _lastLapMsSeen = pkt.LastLapMs;
+                _fuelAtLapStart = fuelPct;
+                _lapStartTick = Environment.TickCount64;
+            }
+            else if (pkt.CurrentLap > _lastCurrentLap && pkt.LastLapMs > 0)
+            {
+                RecordLap(pkt.CurrentLap - 1, pkt.LastLapMs, fuelPct);
+                _lastCurrentLap = pkt.CurrentLap;
+                _lastLapMsSeen = pkt.LastLapMs;
+                _fuelAtLapStart = fuelPct;
+                _lapStartTick = Environment.TickCount64;
+            }
+            else if (pkt.LastLapMs > 0 && pkt.LastLapMs != _lastLapMsSeen && pkt.CurrentLap == _lastCurrentLap)
+            {
+                // Same lap index but a new last-lap time (some packets report this way).
+                RecordLap(pkt.CurrentLap, pkt.LastLapMs, fuelPct);
+                _lastLapMsSeen = pkt.LastLapMs;
+                _fuelAtLapStart = fuelPct;
+                _lapStartTick = Environment.TickCount64;
+            }
         }
-        else if (pkt.CurrentLap > _lastCurrentLap && pkt.LastLapMs > 0)
-        {
-            RecordLap(pkt.CurrentLap - 1, pkt.LastLapMs, fuelPct);
-            _lastCurrentLap = pkt.CurrentLap;
-            _lastLapMsSeen = pkt.LastLapMs;
-            _fuelAtLapStart = fuelPct;
-            _lapStartTick = Environment.TickCount64;
-        }
-        else if (pkt.LastLapMs > 0 && pkt.LastLapMs != _lastLapMsSeen && pkt.CurrentLap == _lastCurrentLap)
-        {
-            // Same lap index but a new last-lap time (some packets report this way).
-            RecordLap(pkt.CurrentLap, pkt.LastLapMs, fuelPct);
-            _lastLapMsSeen = pkt.LastLapMs;
-            _fuelAtLapStart = fuelPct;
-            _lapStartTick = Environment.TickCount64;
-        }
-
-        LastLapMs = pkt.LastLapMs > 0 ? pkt.LastLapMs : LastLapMs;
-        if (SessionBestMs <= 0 && pkt.BestLapMs > 0 && _laps.Count == 0)
-            SessionBestMs = pkt.BestLapMs;
 
         if (_fuelPerLap.Count > 0)
             FuelPercentPerLap = _fuelPerLap.Average();
