@@ -1,15 +1,27 @@
 using System.Runtime.InteropServices;
+using Sentry;
 
 namespace GranTurismoTelemetry;
 
 /// <summary>
 /// Blocking error UI for unhandled exceptions. Shows a message; does not hide the failure.
+/// Also reports the exception to Sentry when the SDK is initialized.
 /// </summary>
 internal static class CrashDialog
 {
     public static void Show(Exception ex)
     {
         try { Console.Error.WriteLine(ex); } catch { /* ignore */ }
+
+        try
+        {
+            SentrySdk.CaptureException(ex);
+            SentrySdk.Flush(TimeSpan.FromSeconds(3));
+        }
+        catch
+        {
+            // Never let reporting replace the local crash UI.
+        }
 
         string caption = "Gran Telemetry";
         string text =
