@@ -4,26 +4,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace GranTurismoTelemetry.Models;
 
-public enum LayoutPreset
-{
-    Driving,
-    Endurance,
-    Minimal,
-}
-
-public static class LayoutPresetExtensions
-{
-    public static string Label(this LayoutPreset preset) => preset.ToString();
-
-    public static LayoutPreset FromRaw(string? raw) =>
-        raw switch
-        {
-            "Endurance" => LayoutPreset.Endurance,
-            "Minimal" => LayoutPreset.Minimal,
-            _ => LayoutPreset.Driving,
-        };
-}
-
 /// <summary>
 /// Persisted app settings (JSON in LocalApplicationData).
 /// </summary>
@@ -37,7 +17,6 @@ public partial class AppSettings : ObservableObject
 
     [ObservableProperty] private string _ps5IP = "";
     [ObservableProperty] private bool _useSimulator;
-    [ObservableProperty] private LayoutPreset _preset = LayoutPreset.Driving;
     [ObservableProperty] private string _hudMode = "Simple";
 
     private bool _loading;
@@ -66,7 +45,6 @@ public partial class AppSettings : ObservableObject
                 {
                     settings.Ps5IP = dto.Ps5IP?.Trim() ?? "";
                     settings.UseSimulator = dto.UseSimulator;
-                    settings.Preset = LayoutPresetExtensions.FromRaw(dto.Preset);
                     settings.HudMode = NormalizeHudMode(dto.HudMode);
                 }
             }
@@ -88,7 +66,6 @@ public partial class AppSettings : ObservableObject
             {
                 Ps5IP = Ps5IP,
                 UseSimulator = UseSimulator,
-                Preset = Preset.ToString(),
                 HudMode = NormalizeHudMode(HudMode),
             };
             File.WriteAllText(FilePath, JsonSerializer.Serialize(dto, JsonOpts));
@@ -101,7 +78,6 @@ public partial class AppSettings : ObservableObject
 
     partial void OnPs5IPChanged(string value) => Save();
     partial void OnUseSimulatorChanged(bool value) => Save();
-    partial void OnPresetChanged(LayoutPreset value) => Save();
     partial void OnHudModeChanged(string value) => Save();
 
     public static string NormalizeHudMode(string? raw) => raw switch
@@ -115,7 +91,6 @@ public partial class AppSettings : ObservableObject
     {
         public string Ps5IP { get; set; } = "";
         public bool UseSimulator { get; set; }
-        public string Preset { get; set; } = "Driving";
         public string HudMode { get; set; } = "Simple";
     }
 }

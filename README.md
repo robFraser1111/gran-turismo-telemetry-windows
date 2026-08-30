@@ -100,7 +100,7 @@ https://github.com/robFraser1111/gran-turismo-telemetry :
 src/GranTurismoTelemetry/
   Theme/              palette
   Gt7/                Salsa20, packet, UDP, simulator, service, session
-  Controls/           traces, RPM strip, fuel / tire / quality bars
+  Controls/           traces, RPM strip, fuel bar
   Views/              Simple + Driving (side monitor) + Pit wall + connect + debug
   ViewModels/         MainViewModel (HudMode)
 tests/GranTurismoTelemetry.Tests/

@@ -13,14 +13,7 @@ public sealed record LapRow(int Number, int TimeMs, double? DeltaSeconds, bool I
     public string TimeLabel => Formatters.LapTime(TimeMs);
     public string NumberLabel => $"L{Number}";
     public string DeltaLabel => IsBest ? "BEST" : DeltaSeconds is double d ? Formatters.Delta(d) : "";
-    public bool ShowDelta => !IsBest && DeltaSeconds is not null;
     public IBrush DeltaBrush => IsBest ? GTTheme.GreenBrush : GTTheme.TableDeltaBrush(DeltaSeconds ?? 0);
-    public string S1Label => Formatters.Delta(S1Delta ?? 0);
-    public string S2Label => Formatters.Delta(S2Delta ?? 0);
-    public string S3Label => Formatters.Delta(S3Delta ?? 0);
-    public IBrush S1Brush => GTTheme.DeltaBrush(S1Delta ?? 0);
-    public IBrush S2Brush => GTTheme.DeltaBrush(S2Delta ?? 0);
-    public IBrush S3Brush => GTTheme.DeltaBrush(S3Delta ?? 0);
     public IBrush RowBackground => IsBest
         ? new SolidColorBrush(Color.Parse("#0F2733"))
         : Brushes.Transparent;
@@ -41,7 +34,6 @@ public sealed record SessionRecord(
 {
     public string Id => $"{Track}-{WhenLabel}";
     public string BestLapLabel => Formatters.LapTime(BestLapMs);
-    public string ShortTrack => Formatters.ShortTrack(Track);
 }
 
 public static class SampleSessions
@@ -73,51 +65,6 @@ public static class SampleSessions
                 new(6, 84_902, 0.363, false, -0.020, 0.210, 0.173),
                 new(5, 86_744, 2.205, false, 0.702, 0.980, 0.523),
             ]),
-        new(
-            Track: "Trial Mountain",
-            CarClass: "Gr.4",
-            BestLapMs: 118_204,
-            Laps: 8,
-            WhenLabel: "Yesterday 20:17",
-            LastLapMs: 118_540,
-            Sectors:
-            [
-                new(1, 38.2, 0.08),
-                new(2, 42.1, -0.04),
-                new(3, 37.904, 0.12),
-            ],
-            DeltaTrace: [0.1, 0.05, -0.02, 0.08, 0.14, 0.09, 0.16],
-            LapRows: []),
-        new(
-            Track: "Suzuka Circuit",
-            CarClass: "Gr.2",
-            BestLapMs: 125_771,
-            Laps: 15,
-            WhenLabel: "Mon 18:41",
-            LastLapMs: 126_102,
-            Sectors:
-            [
-                new(1, 36.4, -0.05),
-                new(2, 48.9, 0.21),
-                new(3, 40.471, 0.04),
-            ],
-            DeltaTrace: [0.0, 0.04, 0.12, 0.08, 0.18, 0.22, 0.15],
-            LapRows: []),
-        new(
-            Track: "Nürburgring GP",
-            CarClass: "Gr.3",
-            BestLapMs: 112_318,
-            Laps: 9,
-            WhenLabel: "Sun 11:26",
-            LastLapMs: 112_890,
-            Sectors:
-            [
-                new(1, 32.1, 0.11),
-                new(2, 41.2, -0.08),
-                new(3, 39.018, 0.05),
-            ],
-            DeltaTrace: [0.04, -0.02, 0.07, 0.12, 0.03, 0.09],
-            LapRows: []),
     ];
 }
 
@@ -138,10 +85,4 @@ public static class Formatters
         string sign = seconds < 0 ? "−" : showPlus ? "+" : "";
         return string.Format(CultureInfo.InvariantCulture, "{0}{1:0.000}", sign, Math.Abs(seconds));
     }
-
-    public static string Sector(double seconds) =>
-        string.Format(CultureInfo.InvariantCulture, "{0:0.000}", seconds);
-
-    public static string ShortTrack(string name) =>
-        name.Replace(" Raceway", "").Replace(" Circuit", "");
 }
