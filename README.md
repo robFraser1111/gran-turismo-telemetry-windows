@@ -12,6 +12,14 @@ A single resizable window. **Simple is the default**, including when maximized. 
 
 Palette: page `#0B1220`, cards `#111A2B`, cyan `#22D3EE`, green `#22C55E`, red `#EF4444`, amber `#F59E0B`.
 
+## Download
+
+Windows 64-bit, no .NET install. Same self-contained exe we publish locally:
+
+[GranTurismoTelemetry.exe](https://github.com/robFraser1111/gran-turismo-telemetry-windows/releases/latest/download/GranTurismoTelemetry.exe)
+
+Tag `v0.9.1` (or `0.9.1`) and push, or run the **release** Action by hand, and that file updates.
+
 ## Screenshots
 
 Refresh `docs/screenshots/` whenever a view's design or layout changes, then update this section if the filenames change.
