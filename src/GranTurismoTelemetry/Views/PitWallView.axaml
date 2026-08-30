@@ -16,9 +16,6 @@
                 </Border>
                 <TextBlock DockPanel.Dock="Right" Text="Pit wall" FontSize="12" FontWeight="SemiBold"
                            Foreground="{StaticResource CyanBrush}" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding TrackName}" FontSize="16" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis"/>
             </DockPanel>
         </Border>
 

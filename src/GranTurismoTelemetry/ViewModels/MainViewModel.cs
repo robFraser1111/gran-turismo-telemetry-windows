@@ -371,8 +371,6 @@ public partial class MainViewModel : ViewModelBase
     public string BestLapValue => Formatters.LapTime(SessionBestMs);
     public int SessionBestMs => Telemetry.Session.SessionBestMs > 0 ? Telemetry.Session.SessionBestMs : Packet.BestLapMs;
     public string LapsInMemoryText => $"{Telemetry.Session.LapsInMemory}";
-    public string TrackName => string.IsNullOrWhiteSpace(Packet.TrackName) ? "" : Packet.TrackName;
-    public string PitWallTitle => "Pit Wall - " + Packet.TrackName;
     public string CarClassChip => Packet.CarClass;
     public string LapChip => $"Lap {Math.Max(Packet.CurrentLap, 1)}";
     public string PresetChip => HudModeLabel;

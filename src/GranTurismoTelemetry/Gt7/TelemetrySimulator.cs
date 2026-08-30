@@ -134,7 +134,6 @@ public sealed class TelemetrySimulator
                 CalcMaxSpeedKph = 320,
                 Flags = SimulatorFlags.CarOnTrack | SimulatorFlags.InGear | SimulatorFlags.HasTurbo | SimulatorFlags.TcsActive,
                 GearRatios = [3.5f, 2.4f, 1.8f, 1.4f, 1.1f, 0.9f, 0.7f, 0f],
-                TrackName = "Deep Forest Raceway",
                 CarClass = "Gr.3",
                 LapProgress = t,
                 LiveDeltaSeconds = liveDelta,
