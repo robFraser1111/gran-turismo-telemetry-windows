@@ -49,7 +49,6 @@ public sealed class TelemetryService
     public List<double> ThrottleTrace { get; } = [];
     public List<double> BrakeTrace { get; } = [];
     public List<double> DeltaTrace { get; } = [];
-    public List<double> SpeedTrace { get; } = [];
     public int RawPackets { get; private set; }
     public int DecodedPackets { get; private set; }
     public int DecodeFailures { get; private set; }
@@ -234,7 +233,6 @@ public sealed class TelemetryService
         else
         {
             var prev = Packet;
-            pkt.TrackName = prev.TrackName ?? "";
             pkt.CarClass = prev.CarClass ?? "";
             double r = Math.Sqrt((double)pkt.PositionX * pkt.PositionX + (double)pkt.PositionZ * pkt.PositionZ);
             if (r > 1)
@@ -264,7 +262,6 @@ public sealed class TelemetryService
             Append(ThrottleTrace, racing ? next.ThrottleNorm : 0);
             Append(BrakeTrace, racing ? next.BrakeNorm : 0);
             Append(DeltaTrace, racing ? next.LiveDeltaSeconds : 0);
-            Append(SpeedTrace, racing ? Math.Clamp(next.SpeedKph / 320.0, 0, 1) : 0);
             Updated?.Invoke();
         });
     }

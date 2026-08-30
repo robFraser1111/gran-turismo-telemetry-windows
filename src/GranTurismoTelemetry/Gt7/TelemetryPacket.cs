@@ -99,7 +99,6 @@ public sealed class TelemetryPacket
     public int CarCode { get; set; }
 
     // UI-only (not on the wire)
-    public string TrackName { get; set; } = "";
     public string CarClass { get; set; } = "Gr.3";
     public double LapProgress { get; set; }
     public double LiveDeltaSeconds { get; set; }
