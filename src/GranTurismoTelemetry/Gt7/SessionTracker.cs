@@ -4,21 +4,36 @@ namespace GranTurismoTelemetry.Gt7;
 
 /// <summary>
 /// In-memory this-app-stint lap table and derived fuel estimates.
-/// Best/Last come only from locally recorded laps — never GT7 packet PB/last.
+/// Best/Last/delta come only from locally recorded laps — never GT7 packet PB/last.
+/// Live delta is a sampled XYZ ghost of the fastest flying lap this stint, not polar LapProgress.
 /// </summary>
 public sealed class SessionTracker
 {
     public const int MaxLaps = 100; // this-session keep-limit for the pit-wall table
 
+    /// <summary>Keep a sample when the car has moved this far in XZ from the last kept point.</summary>
+    internal const double SampleSpacingM = 1.0;
+
+    /// <summary>If the nearest ghost point is farther than this, hold the previous delta.</summary>
+    internal const double MaxMatchDistanceM = 32.0;
+
+    private const int MaxSamplesPerLap = 4096;
+
+    private readonly Func<long> _clock;
     private readonly List<LapRow> _laps = [];
     private readonly List<double> _fuelPerLap = [];
+    private readonly List<GhostSample> _currentLap = [];
+    private List<GhostSample> _ghost = [];
+    private int _ghostBestMs;
+    private int _ghostMatchIndex = -1;
+    private double _heldDelta;
     private int _lastCurrentLap;
     private bool _attached;
     private int _carCode;
     private bool _hasCarCode;
     private int _lastLapMsSeen;
     private double _fuelAtLapStart = -1;
-    private long _lapStartTick = Environment.TickCount64;
+    private long _lapStartTick;
     private long _pauseStartedTick;
     private bool _offTrack;
 
@@ -32,17 +47,29 @@ public sealed class SessionTracker
     public bool WindowOpen { get; private set; }
     public double LiveDeltaSeconds { get; private set; }
 
+    /// <param name="clock">Optional millisecond clock (tests). Production uses <see cref="Environment.TickCount64"/>.</param>
+    public SessionTracker(Func<long>? clock = null)
+    {
+        _clock = clock ?? (() => Environment.TickCount64);
+        _lapStartTick = _clock();
+    }
+
     public void Reset()
     {
         _laps.Clear();
         _fuelPerLap.Clear();
+        _currentLap.Clear();
+        _ghost = [];
+        _ghostBestMs = 0;
+        _ghostMatchIndex = -1;
+        _heldDelta = 0;
         _lastCurrentLap = 0;
         _attached = false;
         _carCode = 0;
         _hasCarCode = false;
         _lastLapMsSeen = 0;
         _fuelAtLapStart = -1;
-        _lapStartTick = Environment.TickCount64;
+        _lapStartTick = Now();
         SessionBestMs = 0;
         LastLapMs = 0;
         FuelPercentPerLap = 2.1;
@@ -74,7 +101,7 @@ public sealed class SessionTracker
         {
             LiveDeltaSeconds = 0;
             if (_pauseStartedTick == 0)
-                _pauseStartedTick = Environment.TickCount64;
+                _pauseStartedTick = Now();
             _offTrack = !pkt.Flags.HasFlag(SimulatorFlags.CarOnTrack)
                         || pkt.Flags.HasFlag(SimulatorFlags.LoadingOrProcessing);
             return;
@@ -93,15 +120,18 @@ public sealed class SessionTracker
             _hasCarCode = true;
         }
 
+        long now = Now();
         if (_pauseStartedTick != 0)
         {
-            _lapStartTick += Environment.TickCount64 - _pauseStartedTick;
+            _lapStartTick += now - _pauseStartedTick;
             _pauseStartedTick = 0;
         }
         if (_offTrack)
         {
-            _lapStartTick = Environment.TickCount64;
+            _lapStartTick = now;
             _offTrack = false;
+            _currentLap.Clear();
+            _ghostMatchIndex = _ghost.Count > 0 ? 0 : -1;
         }
 
         double fuelPct = pkt.FuelPercent;
@@ -114,7 +144,8 @@ public sealed class SessionTracker
                 _lastCurrentLap = pkt.CurrentLap;
                 _lastLapMsSeen = pkt.LastLapMs;
                 _fuelAtLapStart = fuelPct;
-                _lapStartTick = Environment.TickCount64;
+                _lapStartTick = now;
+                _currentLap.Clear();
             }
             else if (pkt.CurrentLap > _lastCurrentLap && pkt.LastLapMs > 0)
             {
@@ -122,7 +153,7 @@ public sealed class SessionTracker
                 _lastCurrentLap = pkt.CurrentLap;
                 _lastLapMsSeen = pkt.LastLapMs;
                 _fuelAtLapStart = fuelPct;
-                _lapStartTick = Environment.TickCount64;
+                _lapStartTick = now;
             }
             else if (pkt.LastLapMs > 0 && pkt.LastLapMs != _lastLapMsSeen && pkt.CurrentLap == _lastCurrentLap)
             {
@@ -130,7 +161,7 @@ public sealed class SessionTracker
                 RecordLap(pkt.CurrentLap, pkt.LastLapMs, fuelPct);
                 _lastLapMsSeen = pkt.LastLapMs;
                 _fuelAtLapStart = fuelPct;
-                _lapStartTick = Environment.TickCount64;
+                _lapStartTick = now;
             }
         }
 
@@ -157,30 +188,46 @@ public sealed class SessionTracker
 
         WindowOpen = fuelPct is > 18 and < 50 || (FuelLapsRemaining is > 1.5 and < 8);
 
-        LiveDeltaSeconds = ComputeLiveDelta(pkt);
+        double elapsed = (Now() - _lapStartTick) / 1000.0;
+        AppendSample(pkt.PositionX, pkt.PositionZ, elapsed);
+        LiveDeltaSeconds = ComputeLiveDelta(pkt, elapsed);
     }
 
-    private double ComputeLiveDelta(TelemetryPacket pkt)
+    private double ComputeLiveDelta(TelemetryPacket pkt, double elapsed)
     {
-        int best = SessionBestMs > 0 ? SessionBestMs : pkt.BestLapMs;
-        if (best <= 0) return pkt.LiveDeltaSeconds;
+        if (_ghost.Count < 2)
+            return 0;
 
-        double bestSec = best / 1000.0;
-        if (pkt.LapProgress > 0.02)
-        {
-            double elapsed = (Environment.TickCount64 - _lapStartTick) / 1000.0;
-            return elapsed - bestSec * pkt.LapProgress;
-        }
+        int idx = FindGhostMatch(pkt.PositionX, pkt.PositionZ, elapsed);
+        if (idx < 0)
+            return _heldDelta;
 
-        if (LastLapMs > 0)
-            return (LastLapMs - best) / 1000.0;
+        double dx = _ghost[idx].X - pkt.PositionX;
+        double dz = _ghost[idx].Z - pkt.PositionZ;
+        if (Math.Sqrt(dx * dx + dz * dz) > MaxMatchDistanceM)
+            return _heldDelta;
 
-        return pkt.LiveDeltaSeconds;
+        _ghostMatchIndex = idx;
+        _heldDelta = elapsed - _ghost[idx].ElapsedSec;
+        return _heldDelta;
     }
 
     private void RecordLap(int number, int timeMs, double fuelPct)
     {
         if (timeMs <= 0) return;
+
+        if (_currentLap.Count > 0)
+            _currentLap[^1] = _currentLap[^1] with { ElapsedSec = timeMs / 1000.0 };
+
+        // Fastest sampled lap this session, independent of Relabel() aging the table.
+        if (_currentLap.Count >= 2 && (_ghost.Count == 0 || timeMs < _ghostBestMs))
+        {
+            _ghost = [.. _currentLap];
+            _ghostBestMs = timeMs;
+        }
+
+        _currentLap.Clear();
+        _ghostMatchIndex = _ghost.Count > 0 ? 0 : -1;
 
         if (_fuelAtLapStart > 0)
         {
@@ -223,4 +270,93 @@ public sealed class SessionTracker
             _laps[i] = src with { IsBest = isBest, DeltaSeconds = delta, IsLatest = i == 0 };
         }
     }
+
+    private void AppendSample(float x, float z, double elapsedSec)
+    {
+        if (_currentLap.Count == 0)
+        {
+            _currentLap.Add(new GhostSample(x, z, elapsedSec));
+            return;
+        }
+
+        var last = _currentLap[^1];
+        double dx = x - last.X;
+        double dz = z - last.Z;
+        double distSq = dx * dx + dz * dz;
+        if (distSq < SampleSpacingM * SampleSpacingM)
+            return;
+
+        if (_currentLap.Count >= MaxSamplesPerLap)
+        {
+            _currentLap[^1] = new GhostSample(x, z, elapsedSec);
+            return;
+        }
+
+        _currentLap.Add(new GhostSample(x, z, elapsedSec));
+    }
+
+    private int FindGhostMatch(float x, float z, double elapsed)
+    {
+        int n = _ghost.Count;
+        if (n == 0) return -1;
+
+        int start;
+        int count;
+        if (_ghostMatchIndex < 0)
+        {
+            start = 0;
+            count = n;
+        }
+        else
+        {
+            int fwd = Math.Min(n, Math.Max(32, n / 8));
+            int back = Math.Min(n, Math.Max(8, n / 32));
+            start = (_ghostMatchIndex - back + n) % n;
+            count = Math.Min(n, back + fwd + 1);
+        }
+
+        int bestIdx = -1;
+        double bestDistSq = double.MaxValue;
+        for (int i = 0; i < count; i++)
+        {
+            int idx = (start + i) % n;
+            var g = _ghost[idx];
+            double dx = g.X - x;
+            double dz = g.Z - z;
+            double d = dx * dx + dz * dz;
+            if (d < bestDistSq)
+            {
+                bestDistSq = d;
+                bestIdx = idx;
+            }
+        }
+
+        if (bestIdx < 0) return -1;
+
+        // Start/finish is the same XZ: among similarly close points, prefer elapsed.
+        double near = bestDistSq + 16.0;
+        int chosen = bestIdx;
+        double bestElapsedErr = Math.Abs(elapsed - _ghost[bestIdx].ElapsedSec);
+        for (int i = 0; i < count; i++)
+        {
+            int idx = (start + i) % n;
+            var g = _ghost[idx];
+            double dx = g.X - x;
+            double dz = g.Z - z;
+            double d = dx * dx + dz * dz;
+            if (d > near) continue;
+            double err = Math.Abs(elapsed - g.ElapsedSec);
+            if (err < bestElapsedErr)
+            {
+                bestElapsedErr = err;
+                chosen = idx;
+            }
+        }
+
+        return chosen;
+    }
+
+    private long Now() => _clock();
+
+    private readonly record struct GhostSample(float X, float Z, double ElapsedSec);
 }
