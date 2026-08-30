@@ -124,6 +124,120 @@ public class SessionTrackerTests
         Assert.Equal(84_539, s.SessionBestMs);
     }
 
+    [Fact]
+    public void GameBestOnFirstPacketsDoesNotSetSessionBestOrDelta()
+    {
+        var s = new SessionTracker();
+        s.Ingest(Racing(1, 0, 153_399, 50));
+        s.Ingest(Racing(1, 0, 153_399, 50));
+
+        Assert.Equal(0, s.SessionBestMs);
+        Assert.Equal(0, s.LastLapMs);
+        Assert.Equal(0, s.LiveDeltaSeconds);
+        Assert.Equal(0, s.LapsInMemory);
+        Assert.Empty(s.Laps);
+    }
+
+    [Fact]
+    public void PacketLastLapMsWithoutRecordLapDoesNotBecomeSessionLast()
+    {
+        var s = new SessionTracker();
+        s.Ingest(Racing(3, 90_000, 80_000, 50));
+        s.Ingest(Racing(3, 90_000, 80_000, 49));
+
+        Assert.Equal(0, s.LastLapMs);
+        Assert.Equal(0, s.SessionBestMs);
+        Assert.Equal(0, s.LapsInMemory);
+    }
+
+    [Fact]
+    public void LocalFlyerIsSessionBestEvenIfPacketBestIsFasterOtherCarPb()
+    {
+        var s = new SessionTracker();
+        s.Ingest(Racing(1, 0, 80_000, 50));
+        s.Ingest(Racing(2, 90_000, 80_000, 47));
+
+        Assert.Equal(1, s.LapsInMemory);
+        Assert.Equal(90_000, s.LastLapMs);
+        Assert.Equal(90_000, s.SessionBestMs);
+        Assert.True(s.Laps[0].IsBest);
+    }
+
+    [Fact]
+    public void CurrentLapDropResetsTableAndSessionBest()
+    {
+        var s = new SessionTracker();
+        s.Ingest(Racing(5, 0, 84_000, 50));
+        s.Ingest(Racing(6, 85_000, 84_000, 47));
+        Assert.Equal(1, s.LapsInMemory);
+        Assert.Equal(85_000, s.SessionBestMs);
+
+        s.Ingest(Racing(1, 85_000, 80_000, 80));
+        Assert.Equal(0, s.LapsInMemory);
+        Assert.Equal(0, s.SessionBestMs);
+        Assert.Equal(0, s.LastLapMs);
+
+        s.Ingest(Racing(2, 90_000, 80_000, 77));
+        Assert.Equal(1, s.LapsInMemory);
+        Assert.Equal(90_000, s.LastLapMs);
+        Assert.Equal(90_000, s.SessionBestMs);
+    }
+
+    [Fact]
+    public void CarCodeChangeResetsStint()
+    {
+        var s = new SessionTracker();
+        s.Ingest(Racing(2, 0, 84_000, 50, carCode: 10));
+        s.Ingest(Racing(3, 85_000, 84_000, 47, carCode: 10));
+        Assert.Equal(1, s.LapsInMemory);
+        Assert.Equal(85_000, s.SessionBestMs);
+
+        s.Ingest(Racing(3, 85_000, 80_000, 47, carCode: 20));
+        Assert.Equal(0, s.LapsInMemory);
+        Assert.Equal(0, s.SessionBestMs);
+        Assert.Equal(0, s.LastLapMs);
+
+        s.Ingest(Racing(4, 91_000, 80_000, 44, carCode: 20));
+        Assert.Equal(1, s.LapsInMemory);
+        Assert.Equal(91_000, s.SessionBestMs);
+        Assert.Equal(91_000, s.LastLapMs);
+    }
+
+    [Fact]
+    public void CurrentLapMinusOneThenOneRecordsCompletedLap()
+    {
+        var s = new SessionTracker();
+        s.Ingest(Racing(1, 0, 0, 50));
+        Assert.Equal(0, s.LapsInMemory);
+
+        s.Ingest(Racing(-1, 85_000, 85_000, 48));
+        Assert.Equal(0, s.LapsInMemory);
+        Assert.Equal(0, s.LastLapMs);
+
+        s.Ingest(Racing(1, 85_000, 85_000, 48));
+        Assert.Equal(1, s.LapsInMemory);
+        Assert.Equal(85_000, s.LastLapMs);
+        Assert.Equal(85_000, s.SessionBestMs);
+        Assert.True(s.Laps[0].IsBest);
+    }
+
+    [Fact]
+    public void MenuThenRacingWithNewLastLapMsRecordsIfLapDidNotDrop()
+    {
+        var s = new SessionTracker();
+        s.Ingest(Racing(1, 0, 0, 50));
+
+        var menu = Racing(-1, 86_500, 0, 48);
+        menu.Flags = SimulatorFlags.Paused;
+        s.Ingest(menu);
+        Assert.Equal(0, s.LiveDeltaSeconds);
+        Assert.Equal(0, s.LapsInMemory);
+
+        s.Ingest(Racing(1, 86_500, 86_500, 48));
+        Assert.Equal(1, s.LapsInMemory);
+        Assert.Equal(86_500, s.LastLapMs);
+    }
+
     private static TelemetryPacket Pkt(int lap, int lastMs, int bestMs, double fuel, float capacity) => new()
     {
         CurrentLap = lap,
@@ -133,9 +247,10 @@ public class SessionTrackerTests
         FuelCapacity = capacity,
         TotalLaps = 20,
         LapProgress = 0.01,
+        Flags = SimulatorFlags.CarOnTrack,
     };
 
-    private static TelemetryPacket Racing(int lap, int lastMs, int bestMs, double fuel) => new()
+    private static TelemetryPacket Racing(int lap, int lastMs, int bestMs, double fuel, int carCode = 0) => new()
     {
         CurrentLap = lap,
         LastLapMs = lastMs,
@@ -144,6 +259,7 @@ public class SessionTrackerTests
         FuelCapacity = 100,
         TotalLaps = 20,
         LapProgress = 0.01,
+        CarCode = carCode,
         Flags = SimulatorFlags.CarOnTrack,
     };
 }
