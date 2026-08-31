@@ -32,7 +32,7 @@ public sealed class TelemetrySimulator
     private void RunLoop()
     {
         int packetId = 0;
-        int lap = 12;
+        int lap = 101;
         const int bestLapMs = 84_539;
         int lastLapMs = 84_881;
         long lapStart = Environment.TickCount64;

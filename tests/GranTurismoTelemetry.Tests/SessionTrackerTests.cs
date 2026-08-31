@@ -148,7 +148,7 @@ public class SessionTrackerTests
     {
         var s = new SessionTracker();
         s.Seed(SampleSessions.All[0].LapRows);
-        Assert.Equal(8, s.LapsInMemory);
+        Assert.Equal(100, s.LapsInMemory);
         Assert.True(s.Laps[0].IsLatest);
         Assert.Equal(84_539, s.SessionBestMs);
     }

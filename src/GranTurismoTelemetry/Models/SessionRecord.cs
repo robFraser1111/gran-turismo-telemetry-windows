@@ -38,15 +38,54 @@ public sealed record SessionRecord(
 
 public static class SampleSessions
 {
-    public static IReadOnlyList<SessionRecord> All { get; } =
+    // Newest-first demo times (old L12-L5). The rest fill out to 100 so debug mode can scroll.
+    private static readonly (int TimeMs, double? S1, double? S2, double? S3)[] Newest =
     [
-        new(
+        (84_881, -0.031, -0.190, -0.121),
+        (85_104, 0.102, 0.301, 0.162),
+        (84_539, -0.010, -0.004, -0.002),
+        (85_882, 0.402, 0.611, 0.330),
+        (86_207, 0.512, 0.740, 0.416),
+        (85_331, 0.210, 0.402, 0.180),
+        (84_902, -0.020, 0.210, 0.173),
+        (86_744, 0.702, 0.980, 0.523),
+    ];
+
+    public static IReadOnlyList<SessionRecord> All { get; } = [DeepForest()];
+
+    private static SessionRecord DeepForest()
+    {
+        const int bestMs = 84_539;
+        const int count = 100;
+        var rows = new LapRow[count];
+        for (int i = 0; i < count; i++)
+        {
+            int number = count - i;
+            int timeMs;
+            double? s1 = null, s2 = null, s3 = null;
+            if (i < Newest.Length)
+            {
+                (timeMs, s1, s2, s3) = Newest[i];
+            }
+            else
+            {
+                // Deterministic scatter ~0.2s-2.8s off best so only the seeded BEST stays BEST.
+                int wobble = ((number * 37) % 47) * 40 + ((number * 13) % 11) * 70;
+                timeMs = bestMs + 180 + wobble;
+            }
+
+            bool isBest = timeMs == bestMs;
+            double? delta = isBest ? null : (timeMs - bestMs) / 1000.0;
+            rows[i] = new LapRow(number, timeMs, delta, isBest, s1, s2, s3);
+        }
+
+        return new(
             Track: "Deep Forest Raceway",
             CarClass: "Gr.3",
-            BestLapMs: 84_539,
-            Laps: 12,
+            BestLapMs: bestMs,
+            Laps: count,
             WhenLabel: "Today 14:32",
-            LastLapMs: 84_881,
+            LastLapMs: rows[0].TimeMs,
             Sectors:
             [
                 new(1, 27.902, -0.121),
@@ -54,18 +93,8 @@ public static class SampleSessions
                 new(3, 24.323, 0.011),
             ],
             DeltaTrace: [0.05, -0.04, 0.08, -0.12, 0.04, -0.18, 0.02, -0.22, 0.06, -0.28, 0.10],
-            LapRows:
-            [
-                new(12, 84_881, -0.342, false, -0.031, -0.190, -0.121),
-                new(11, 85_104, 0.565, false, 0.102, 0.301, 0.162),
-                new(10, 84_539, null, true, -0.010, -0.004, -0.002),
-                new(9, 85_882, 1.343, false, 0.402, 0.611, 0.330),
-                new(8, 86_207, 1.668, false, 0.512, 0.740, 0.416),
-                new(7, 85_331, 0.792, false, 0.210, 0.402, 0.180),
-                new(6, 84_902, 0.363, false, -0.020, 0.210, 0.173),
-                new(5, 86_744, 2.205, false, 0.702, 0.980, 0.523),
-            ]),
-    ];
+            LapRows: rows);
+    }
 }
 
 public static class Formatters
