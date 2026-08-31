@@ -18,7 +18,7 @@ public sealed class SessionTracker
     /// <summary>If the nearest ghost point is farther than this, hold the previous delta.</summary>
     internal const double MaxMatchDistanceM = 32.0;
 
-    /// <summary>A later lap must cover at least this fraction of the longest completed path this stint.</summary>
+    /// <summary>When replacing an existing ghost, the new lap must cover at least this fraction of the current ghost path.</summary>
     internal const double FlyerPathFraction = 0.85;
 
     private const int MaxSamplesPerLap = 4096;
@@ -29,6 +29,7 @@ public sealed class SessionTracker
     private readonly List<GhostSample> _currentLap = [];
     private List<GhostSample> _ghost = [];
     private int _ghostBestMs;
+    private double _ghostPathM;
     private int _ghostMatchIndex = -1;
     private double _heldDelta;
     private int _completedLapCount;
@@ -67,6 +68,7 @@ public sealed class SessionTracker
         _currentLap.Clear();
         _ghost = [];
         _ghostBestMs = 0;
+        _ghostPathM = 0;
         _ghostMatchIndex = -1;
         _heldDelta = 0;
         _completedLapCount = 0;
@@ -228,21 +230,30 @@ public sealed class SessionTracker
             _currentLap[^1] = _currentLap[^1] with { ElapsedSec = timeMs / 1000.0 };
 
         double path = PathLengthM(_currentLap);
-        if (path > _maxPathM)
-            _maxPathM = path;
         _completedLapCount++;
 
-        // Never promote the first completed lap (out-lap / standing start). Later laps
-        // become the live ghost only if they look like a full-track flyer. Session best
-        // time is independent — lap 1 can still be BEST in the table.
+        // Never promote the first completed lap (out-lap / standing start). Do not
+        // count its path toward _maxPathM — a pit out-lap is longer than a flying
+        // lap and would otherwise block every later flyer at 85%.
+        // Session best time is independent — lap 1 can still be BEST in the table.
         bool eligibleFlyer = _completedLapCount > 1
             && _currentLap.Count >= 2
-            && timeMs > 0
-            && path >= FlyerPathFraction * _maxPathM;
-        if (eligibleFlyer && (_ghost.Count == 0 || timeMs < _ghostBestMs))
+            && timeMs > 0;
+        if (eligibleFlyer)
         {
-            _ghost = [.. _currentLap];
-            _ghostBestMs = timeMs;
+            if (path > _maxPathM)
+                _maxPathM = path;
+
+            // First eligible flyer always becomes the ghost. 85% applies only when
+            // replacing so a truncated/pit lap cannot overwrite a full flyer.
+            bool install = _ghost.Count == 0
+                || (timeMs < _ghostBestMs && path >= FlyerPathFraction * _ghostPathM);
+            if (install)
+            {
+                _ghost = [.. _currentLap];
+                _ghostBestMs = timeMs;
+                _ghostPathM = path;
+            }
         }
 
         _currentLap.Clear();

@@ -369,6 +369,30 @@ public class SessionTrackerTests
     }
 
     [Fact]
+    public void LongOutLapDoesNotBlockShorterFlyerGhost()
+    {
+        var clock = new Clock(1_000_000);
+        var s = new SessionTracker(() => clock.Now);
+
+        // Pit out-lap is a longer path (radius 120) than a flying lap. It must not
+        // set the 85% bar — otherwise the radius-80 flyer never becomes the ghost.
+        long start = clock.Now;
+        DriveArc(s, clock, lap: 1, lastMs: 0, bestMs: 80_000, startTick: start, durationMs: 90_000, points: 16, radius: 120);
+        CompleteLap(s, clock, newLap: 2, lastMs: 90_000, bestMs: 80_000, tick: start + 90_000, radius: 120);
+
+        Assert.Equal(1, s.LapsInMemory);
+        Assert.True(double.IsNaN(s.LiveDeltaSeconds));
+
+        start = clock.Now;
+        DriveArc(s, clock, lap: 2, lastMs: 90_000, bestMs: 80_000, startTick: start, durationMs: 80_000, points: 16, radius: 80);
+        CompleteLap(s, clock, newLap: 3, lastMs: 80_000, bestMs: 80_000, tick: start + 80_000, radius: 80);
+
+        DriveArc(s, clock, lap: 3, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 96_000, points: 9, radius: 80);
+        Assert.False(double.IsNaN(s.LiveDeltaSeconds), "shorter flyer after a long out-lap must install the ghost");
+        Assert.True(s.LiveDeltaSeconds > 1.0, $"expected +ve delta vs flyer ghost, got {s.LiveDeltaSeconds}");
+    }
+
+    [Fact]
     public void TruncatedLapDoesNotBecomeOrReplaceGhost()
     {
         var clock = new Clock(1_000_000);
