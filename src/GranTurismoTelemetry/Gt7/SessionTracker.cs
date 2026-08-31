@@ -6,6 +6,7 @@ namespace GranTurismoTelemetry.Gt7;
 /// In-memory this-app-stint lap table and derived fuel estimates.
 /// Best/Last/delta come only from locally recorded laps — never GT7 packet PB/last.
 /// Live delta is a sampled XYZ ghost of the fastest flying lap this stint, not polar LapProgress.
+/// The first completed lap is never the ghost (out-lap / standing start).
 /// </summary>
 public sealed class SessionTracker
 {
@@ -17,6 +18,9 @@ public sealed class SessionTracker
     /// <summary>If the nearest ghost point is farther than this, hold the previous delta.</summary>
     internal const double MaxMatchDistanceM = 32.0;
 
+    /// <summary>A later lap must cover at least this fraction of the longest completed path this stint.</summary>
+    internal const double FlyerPathFraction = 0.85;
+
     private const int MaxSamplesPerLap = 4096;
 
     private readonly Func<long> _clock;
@@ -27,6 +31,8 @@ public sealed class SessionTracker
     private int _ghostBestMs;
     private int _ghostMatchIndex = -1;
     private double _heldDelta;
+    private int _completedLapCount;
+    private double _maxPathM;
     private int _lastCurrentLap;
     private bool _attached;
     private int _carCode;
@@ -63,6 +69,8 @@ public sealed class SessionTracker
         _ghostBestMs = 0;
         _ghostMatchIndex = -1;
         _heldDelta = 0;
+        _completedLapCount = 0;
+        _maxPathM = 0;
         _lastCurrentLap = 0;
         _attached = false;
         _carCode = 0;
@@ -196,7 +204,7 @@ public sealed class SessionTracker
     private double ComputeLiveDelta(TelemetryPacket pkt, double elapsed)
     {
         if (_ghost.Count < 2)
-            return 0;
+            return double.NaN;
 
         int idx = FindGhostMatch(pkt.PositionX, pkt.PositionZ, elapsed);
         if (idx < 0)
@@ -219,8 +227,19 @@ public sealed class SessionTracker
         if (_currentLap.Count > 0)
             _currentLap[^1] = _currentLap[^1] with { ElapsedSec = timeMs / 1000.0 };
 
-        // Fastest sampled lap this session, independent of Relabel() aging the table.
-        if (_currentLap.Count >= 2 && (_ghost.Count == 0 || timeMs < _ghostBestMs))
+        double path = PathLengthM(_currentLap);
+        if (path > _maxPathM)
+            _maxPathM = path;
+        _completedLapCount++;
+
+        // Never promote the first completed lap (out-lap / standing start). Later laps
+        // become the live ghost only if they look like a full-track flyer. Session best
+        // time is independent — lap 1 can still be BEST in the table.
+        bool eligibleFlyer = _completedLapCount > 1
+            && _currentLap.Count >= 2
+            && timeMs > 0
+            && path >= FlyerPathFraction * _maxPathM;
+        if (eligibleFlyer && (_ghost.Count == 0 || timeMs < _ghostBestMs))
         {
             _ghost = [.. _currentLap];
             _ghostBestMs = timeMs;
@@ -354,6 +373,18 @@ public sealed class SessionTracker
         }
 
         return chosen;
+    }
+
+    private static double PathLengthM(List<GhostSample> samples)
+    {
+        double sum = 0;
+        for (int i = 1; i < samples.Count; i++)
+        {
+            double dx = samples[i].X - samples[i - 1].X;
+            double dz = samples[i].Z - samples[i - 1].Z;
+            sum += Math.Sqrt(dx * dx + dz * dz);
+        }
+        return sum;
     }
 
     private long Now() => _clock();

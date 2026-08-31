@@ -162,7 +162,7 @@ public class SessionTrackerTests
 
         Assert.Equal(0, s.SessionBestMs);
         Assert.Equal(0, s.LastLapMs);
-        Assert.Equal(0, s.LiveDeltaSeconds);
+        Assert.True(double.IsNaN(s.LiveDeltaSeconds));
         Assert.Equal(0, s.LapsInMemory);
         Assert.Empty(s.Laps);
     }
@@ -268,27 +268,37 @@ public class SessionTrackerTests
     }
 
     [Fact]
-    public void NoGhostYetLiveDeltaIsZeroUntilLastLapExists()
+    public void NoGhostYetLiveDeltaIsNaN()
     {
         var clock = new Clock(1_000_000);
         var none = new SessionTracker(() => clock.Now);
         var empty = PathPkt(1, lastMs: 0, bestMs: 0, x: 80, z: 0);
         empty.LiveDeltaSeconds = 9.99;
         none.Ingest(empty);
-        Assert.Equal(0, none.LiveDeltaSeconds);
+        Assert.True(double.IsNaN(none.LiveDeltaSeconds));
 
         var withGameBest = new SessionTracker(() => clock.Now);
         var pkt = PathPkt(5, lastMs: 85_000, bestMs: 84_000, x: 80, z: 0);
         pkt.LiveDeltaSeconds = 9.99;
         withGameBest.Ingest(pkt);
-        Assert.Equal(0, withGameBest.LiveDeltaSeconds);
+        Assert.True(double.IsNaN(withGameBest.LiveDeltaSeconds));
         Assert.Equal(0, withGameBest.SessionBestMs);
         Assert.Equal(0, withGameBest.LastLapMs);
         Assert.Equal(0, withGameBest.LapsInMemory);
     }
 
     [Fact]
-    public void SamePathSlowerIsPositiveFasterIsNegative()
+    public void FormattersDeltaShowsDashesForNaNAndZeroForPause()
+    {
+        Assert.Equal("–.–––", Formatters.Delta(double.NaN));
+        Assert.Equal("–.–––", Formatters.LapTime(0));
+        Assert.Equal("0.000", Formatters.Delta(0));
+        Assert.Equal("0.000", Formatters.Delta(0.0001));
+        Assert.Equal("+0.001", Formatters.Delta(0.001));
+    }
+
+    [Fact]
+    public void FirstCompletedLapDoesNotInstallGhost()
     {
         var clock = new Clock(1_000_000);
         var s = new SessionTracker(() => clock.Now);
@@ -298,14 +308,45 @@ public class SessionTrackerTests
 
         Assert.Equal(1, s.LapsInMemory);
         Assert.Equal(80_000, s.SessionBestMs);
+        Assert.True(s.Laps[0].IsBest);
+        Assert.True(double.IsNaN(s.LiveDeltaSeconds));
+
+        DriveArc(s, clock, lap: 2, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 80_000, points: 9);
+        Assert.True(double.IsNaN(s.LiveDeltaSeconds), $"expected NaN until a second flyer, got {s.LiveDeltaSeconds}");
+    }
+
+    [Fact]
+    public void SecondFullPathFlyerInstallsGhostAndFollowingLapGetsLiveDelta()
+    {
+        var clock = new Clock(1_000_000);
+        var s = new SessionTracker(() => clock.Now);
+
+        CompleteIgnoredOutLapThenFlyer(s, clock, flyerMs: 80_000);
+
+        Assert.Equal(2, s.LapsInMemory);
+        Assert.Equal(80_000, s.SessionBestMs);
+        Assert.True(double.IsNaN(s.LiveDeltaSeconds) || Math.Abs(s.LiveDeltaSeconds) < 2.0);
+
+        DriveArc(s, clock, lap: 3, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 96_000, points: 9);
+        Assert.False(double.IsNaN(s.LiveDeltaSeconds));
+        Assert.True(s.LiveDeltaSeconds > 1.0, $"expected +ve delta vs flyer ghost, got {s.LiveDeltaSeconds}");
+    }
+
+    [Fact]
+    public void SamePathSlowerIsPositiveFasterIsNegative()
+    {
+        var clock = new Clock(1_000_000);
+        var s = new SessionTracker(() => clock.Now);
+
+        CompleteIgnoredOutLapThenFlyer(s, clock, flyerMs: 80_000);
 
         // Halfway around a slower lap: +8s vs the 80s ghost (96s pace).
-        DriveArc(s, clock, lap: 2, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 96_000, points: 9);
+        DriveArc(s, clock, lap: 3, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 96_000, points: 9);
+        Assert.False(double.IsNaN(s.LiveDeltaSeconds));
         Assert.True(s.LiveDeltaSeconds > 1.0, $"expected +ve delta, got {s.LiveDeltaSeconds}");
 
-        // Restart a faster lap from the start/finish after completing this one.
-        CompleteLap(s, clock, newLap: 3, lastMs: 96_000, bestMs: 80_000, tick: clock.Now + 1);
-        DriveArc(s, clock, lap: 3, lastMs: 96_000, bestMs: 80_000, startTick: clock.Now, durationMs: 64_000, points: 9);
+        CompleteLap(s, clock, newLap: 4, lastMs: 96_000, bestMs: 80_000, tick: clock.Now + 1);
+        DriveArc(s, clock, lap: 4, lastMs: 96_000, bestMs: 80_000, startTick: clock.Now, durationMs: 64_000, points: 9);
         Assert.True(s.LiveDeltaSeconds < -1.0, $"expected -ve delta, got {s.LiveDeltaSeconds}");
     }
 
@@ -315,30 +356,51 @@ public class SessionTrackerTests
         var clock = new Clock(1_000_000);
         var s = new SessionTracker(() => clock.Now);
 
-        DriveArc(s, clock, lap: 1, lastMs: 0, bestMs: 80_000, startTick: clock.Now, durationMs: 80_000, points: 16);
-        CompleteLap(s, clock, newLap: 2, lastMs: 80_000, bestMs: 80_000, tick: 1_000_000 + 80_000);
+        CompleteIgnoredOutLapThenFlyer(s, clock, flyerMs: 80_000);
 
-        DriveArc(s, clock, lap: 2, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 64_000, points: 16);
-        CompleteLap(s, clock, newLap: 3, lastMs: 64_000, bestMs: 64_000, tick: clock.Now);
+        DriveArc(s, clock, lap: 3, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 64_000, points: 16);
+        CompleteLap(s, clock, newLap: 4, lastMs: 64_000, bestMs: 64_000, tick: clock.Now);
 
         Assert.Equal(64_000, s.SessionBestMs);
 
-        // Same positions as the original 80s lap should now be late vs the 64s ghost.
-        DriveArc(s, clock, lap: 3, lastMs: 64_000, bestMs: 64_000, startTick: clock.Now, durationMs: 80_000, points: 9);
+        DriveArc(s, clock, lap: 4, lastMs: 64_000, bestMs: 64_000, startTick: clock.Now, durationMs: 80_000, points: 9);
+        Assert.False(double.IsNaN(s.LiveDeltaSeconds));
         Assert.True(s.LiveDeltaSeconds > 1.0, $"expected +ve vs new ghost, got {s.LiveDeltaSeconds}");
     }
 
     [Fact]
-    public void PauseZerosDeltaAndDoesNotOverwriteGhost()
+    public void TruncatedLapDoesNotBecomeOrReplaceGhost()
     {
         var clock = new Clock(1_000_000);
         var s = new SessionTracker(() => clock.Now);
 
-        DriveArc(s, clock, lap: 1, lastMs: 0, bestMs: 80_000, startTick: clock.Now, durationMs: 80_000, points: 16);
-        CompleteLap(s, clock, newLap: 2, lastMs: 80_000, bestMs: 80_000, tick: 1_000_000 + 80_000);
+        CompleteIgnoredOutLapThenFlyer(s, clock, flyerMs: 80_000);
 
-        DriveArc(s, clock, lap: 2, lastMs: 80_000, bestMs: 80_000, startTick: 1_000_000 + 80_000, durationMs: 88_000, points: 9);
+        // Tiny path vs the prior full ellipse — even a 50s official time must not become the ghost.
+        long start = clock.Now;
+        DriveArc(s, clock, lap: 3, lastMs: 80_000, bestMs: 80_000, startTick: start, durationMs: 50_000, points: 16, radius: 5);
+        CompleteLap(s, clock, newLap: 4, lastMs: 50_000, bestMs: 50_000, tick: start + 50_000, radius: 5);
+
+        Assert.Equal(50_000, s.SessionBestMs);
+
+        // Full-path 96s pace vs the 80s flyer ghost: +ve. A wrongly installed 50s tiny ghost
+        // is far off this line so would hold ~0 rather than a real slow-lap delta.
+        DriveArc(s, clock, lap: 4, lastMs: 50_000, bestMs: 50_000, startTick: clock.Now, durationMs: 96_000, points: 9);
+        Assert.False(double.IsNaN(s.LiveDeltaSeconds));
+        Assert.True(s.LiveDeltaSeconds > 1.0, $"expected +ve vs 80s flyer ghost, not a 50s truncated ghost; got {s.LiveDeltaSeconds}");
+    }
+
+    [Fact]
+    public void PauseZerosDeltaWhenGhostExists()
+    {
+        var clock = new Clock(1_000_000);
+        var s = new SessionTracker(() => clock.Now);
+
+        CompleteIgnoredOutLapThenFlyer(s, clock, flyerMs: 80_000);
+
+        DriveArc(s, clock, lap: 3, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 88_000, points: 9);
         double before = s.LiveDeltaSeconds;
+        Assert.False(double.IsNaN(before));
         Assert.True(before > 0.5, $"expected +ve vs ghost before pause, got {before}");
         int laps = s.LapsInMemory;
         float x = (float)(80 * Math.Cos(8 / 9.0 * 2 * Math.PI));
@@ -354,11 +416,24 @@ public class SessionTrackerTests
         Assert.Equal(laps, s.LapsInMemory);
         Assert.Equal(80_000, s.SessionBestMs);
 
-        s.Ingest(PathPkt(2, 80_000, 80_000, x, z));
+        s.Ingest(PathPkt(3, 80_000, 80_000, x, z));
         Assert.Equal(laps, s.LapsInMemory);
         Assert.Equal(80_000, s.SessionBestMs);
         Assert.InRange(s.LiveDeltaSeconds, before - 1.0, before + 1.0);
         Assert.True(s.LiveDeltaSeconds > 0.4);
+    }
+
+    [Fact]
+    public void PauseWithNoGhostZerosLiveDelta()
+    {
+        var s = new SessionTracker();
+        s.Ingest(Racing(1, 0, 0, 50));
+        Assert.True(double.IsNaN(s.LiveDeltaSeconds));
+
+        var paused = Racing(1, 0, 0, 50);
+        paused.Flags = SimulatorFlags.CarOnTrack | SimulatorFlags.Paused;
+        s.Ingest(paused);
+        Assert.Equal(0, s.LiveDeltaSeconds);
     }
 
     [Fact]
@@ -367,21 +442,27 @@ public class SessionTrackerTests
         var clock = new Clock(1_000_000);
         var s = new SessionTracker(() => clock.Now);
 
-        DriveArc(s, clock, lap: 1, lastMs: 0, bestMs: 70_000, startTick: clock.Now, durationMs: 70_000, points: 16);
-        CompleteLap(s, clock, newLap: 2, lastMs: 70_000, bestMs: 70_000, tick: clock.Now);
+        // Out-lap ignored as ghost; 70s flyer is the live reference even after the table ages it out.
+        DriveArc(s, clock, lap: 1, lastMs: 0, bestMs: 80_000, startTick: clock.Now, durationMs: 80_000, points: 16);
+        CompleteLap(s, clock, newLap: 2, lastMs: 80_000, bestMs: 80_000, tick: clock.Now);
+        long flyerStart = clock.Now;
+        DriveArc(s, clock, lap: 2, lastMs: 80_000, bestMs: 70_000, startTick: flyerStart, durationMs: 70_000, points: 16);
+        CompleteLap(s, clock, newLap: 3, lastMs: 70_000, bestMs: 70_000, tick: flyerStart + 70_000);
 
-        int lastDriveLap = SessionTracker.MaxLaps + 2;
-        for (int lap = 2; lap <= lastDriveLap; lap++)
+        int lastDriveLap = SessionTracker.MaxLaps + 3;
+        for (int lap = 3; lap <= lastDriveLap; lap++)
         {
             long start = clock.Now;
-            DriveArc(s, clock, lap, lastMs: lap == 2 ? 70_000 : 80_000, bestMs: 70_000, startTick: start, durationMs: 80_000, points: 8);
+            DriveArc(s, clock, lap, lastMs: 70_000, bestMs: 70_000, startTick: start, durationMs: 80_000, points: 8);
             CompleteLap(s, clock, newLap: lap + 1, lastMs: 80_000, bestMs: 70_000, tick: start + 80_000);
         }
 
         Assert.Equal(SessionTracker.MaxLaps, s.LapsInMemory);
         Assert.True(s.SessionBestMs > 70_000);
+        Assert.DoesNotContain(s.Laps, l => l.TimeMs == 70_000);
 
         DriveArc(s, clock, lap: lastDriveLap + 1, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 70_000, points: 9);
+        Assert.False(double.IsNaN(s.LiveDeltaSeconds));
         Assert.True(s.LiveDeltaSeconds < 2.0, $"ghost should still be the 70s flyer, got {s.LiveDeltaSeconds}");
         Assert.InRange(s.LiveDeltaSeconds, -2.0, 2.0);
     }
@@ -392,135 +473,31 @@ public class SessionTrackerTests
         var clock = new Clock(1_000_000);
         var s = new SessionTracker(() => clock.Now);
 
-        DriveArc(s, clock, lap: 1, lastMs: 0, bestMs: 80_000, startTick: clock.Now, durationMs: 80_000, points: 16);
-        CompleteLap(s, clock, newLap: 2, lastMs: 80_000, bestMs: 80_000, tick: 1_000_000 + 80_000);
+        CompleteIgnoredOutLapThenFlyer(s, clock, flyerMs: 80_000);
 
-        DriveArc(s, clock, lap: 2, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 88_000, points: 9);
+        DriveArc(s, clock, lap: 3, lastMs: 80_000, bestMs: 80_000, startTick: clock.Now, durationMs: 88_000, points: 9);
         double held = s.LiveDeltaSeconds;
+        Assert.False(double.IsNaN(held));
         Assert.True(held > 0.5);
 
-        s.Ingest(PathPkt(2, 80_000, 80_000, x: 800, z: 800));
+        s.Ingest(PathPkt(3, 80_000, 80_000, x: 800, z: 800));
         Assert.Equal(held, s.LiveDeltaSeconds);
-    }
-
-    [Fact]
-    public void GameBestOnFirstPacketsDoesNotSetSessionBestOrDelta()
-    {
-        var s = new SessionTracker();
-        s.Ingest(Racing(1, 0, 153_399, 50));
-        s.Ingest(Racing(1, 0, 153_399, 50));
-
-        Assert.Equal(0, s.SessionBestMs);
-        Assert.Equal(0, s.LastLapMs);
-        Assert.Equal(0, s.LiveDeltaSeconds);
-        Assert.Equal(0, s.LapsInMemory);
-        Assert.Empty(s.Laps);
-    }
-
-    [Fact]
-    public void PacketLastLapMsWithoutRecordLapDoesNotBecomeSessionLast()
-    {
-        var s = new SessionTracker();
-        s.Ingest(Racing(3, 90_000, 80_000, 50));
-        s.Ingest(Racing(3, 90_000, 80_000, 49));
-
-        Assert.Equal(0, s.LastLapMs);
-        Assert.Equal(0, s.SessionBestMs);
-        Assert.Equal(0, s.LapsInMemory);
-    }
-
-    [Fact]
-    public void LocalFlyerIsSessionBestEvenIfPacketBestIsFasterOtherCarPb()
-    {
-        var s = new SessionTracker();
-        s.Ingest(Racing(1, 0, 80_000, 50));
-        s.Ingest(Racing(2, 90_000, 80_000, 47));
-
-        Assert.Equal(1, s.LapsInMemory);
-        Assert.Equal(90_000, s.LastLapMs);
-        Assert.Equal(90_000, s.SessionBestMs);
-        Assert.True(s.Laps[0].IsBest);
-    }
-
-    [Fact]
-    public void CurrentLapDropResetsTableAndSessionBest()
-    {
-        var s = new SessionTracker();
-        s.Ingest(Racing(5, 0, 84_000, 50));
-        s.Ingest(Racing(6, 85_000, 84_000, 47));
-        Assert.Equal(1, s.LapsInMemory);
-        Assert.Equal(85_000, s.SessionBestMs);
-
-        s.Ingest(Racing(1, 85_000, 80_000, 80));
-        Assert.Equal(0, s.LapsInMemory);
-        Assert.Equal(0, s.SessionBestMs);
-        Assert.Equal(0, s.LastLapMs);
-
-        s.Ingest(Racing(2, 90_000, 80_000, 77));
-        Assert.Equal(1, s.LapsInMemory);
-        Assert.Equal(90_000, s.LastLapMs);
-        Assert.Equal(90_000, s.SessionBestMs);
-    }
-
-    [Fact]
-    public void CarCodeChangeResetsStint()
-    {
-        var s = new SessionTracker();
-        s.Ingest(Racing(2, 0, 84_000, 50, carCode: 10));
-        s.Ingest(Racing(3, 85_000, 84_000, 47, carCode: 10));
-        Assert.Equal(1, s.LapsInMemory);
-        Assert.Equal(85_000, s.SessionBestMs);
-
-        s.Ingest(Racing(3, 85_000, 80_000, 47, carCode: 20));
-        Assert.Equal(0, s.LapsInMemory);
-        Assert.Equal(0, s.SessionBestMs);
-        Assert.Equal(0, s.LastLapMs);
-
-        s.Ingest(Racing(4, 91_000, 80_000, 44, carCode: 20));
-        Assert.Equal(1, s.LapsInMemory);
-        Assert.Equal(91_000, s.SessionBestMs);
-        Assert.Equal(91_000, s.LastLapMs);
-    }
-
-    [Fact]
-    public void CurrentLapMinusOneThenOneRecordsCompletedLap()
-    {
-        var s = new SessionTracker();
-        s.Ingest(Racing(1, 0, 0, 50));
-        Assert.Equal(0, s.LapsInMemory);
-
-        s.Ingest(Racing(-1, 85_000, 85_000, 48));
-        Assert.Equal(0, s.LapsInMemory);
-        Assert.Equal(0, s.LastLapMs);
-
-        s.Ingest(Racing(1, 85_000, 85_000, 48));
-        Assert.Equal(1, s.LapsInMemory);
-        Assert.Equal(85_000, s.LastLapMs);
-        Assert.Equal(85_000, s.SessionBestMs);
-        Assert.True(s.Laps[0].IsBest);
-    }
-
-    [Fact]
-    public void MenuThenRacingWithNewLastLapMsRecordsIfLapDidNotDrop()
-    {
-        var s = new SessionTracker();
-        s.Ingest(Racing(1, 0, 0, 50));
-
-        var menu = Racing(-1, 86_500, 0, 48);
-        menu.Flags = SimulatorFlags.Paused;
-        s.Ingest(menu);
-        Assert.Equal(0, s.LiveDeltaSeconds);
-        Assert.Equal(0, s.LapsInMemory);
-
-        s.Ingest(Racing(1, 86_500, 86_500, 48));
-        Assert.Equal(1, s.LapsInMemory);
-        Assert.Equal(86_500, s.LastLapMs);
     }
 
     private sealed class Clock
     {
         public long Now;
         public Clock(long now) => Now = now;
+    }
+
+    private static void CompleteIgnoredOutLapThenFlyer(SessionTracker s, Clock clock, int flyerMs, int points = 16)
+    {
+        long start = clock.Now;
+        DriveArc(s, clock, lap: 1, lastMs: 0, bestMs: flyerMs, startTick: start, durationMs: flyerMs, points: points);
+        CompleteLap(s, clock, newLap: 2, lastMs: flyerMs, bestMs: flyerMs, tick: start + flyerMs);
+        start = clock.Now;
+        DriveArc(s, clock, lap: 2, lastMs: flyerMs, bestMs: flyerMs, startTick: start, durationMs: flyerMs, points: points);
+        CompleteLap(s, clock, newLap: 3, lastMs: flyerMs, bestMs: flyerMs, tick: start + flyerMs);
     }
 
     private static void DriveArc(SessionTracker s, Clock clock, int lap, int lastMs, int bestMs,

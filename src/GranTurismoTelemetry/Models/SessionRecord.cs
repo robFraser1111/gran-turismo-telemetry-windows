@@ -110,6 +110,7 @@ public static class Formatters
 
     public static string Delta(double seconds, bool showPlus = true)
     {
+        if (double.IsNaN(seconds)) return "–.–––";
         if (Math.Abs(seconds) < 0.0005) return "0.000";
         string sign = seconds < 0 ? "−" : showPlus ? "+" : "";
         return string.Format(CultureInfo.InvariantCulture, "{0}{1:0.000}", sign, Math.Abs(seconds));
