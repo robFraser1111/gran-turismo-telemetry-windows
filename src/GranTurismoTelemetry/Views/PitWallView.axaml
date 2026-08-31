@@ -19,7 +19,7 @@
             </DockPanel>
         </Border>
 
-        <Grid Margin="16" ColumnDefinitions="*,12,0.95*">
+        <Grid Margin="16" ColumnDefinitions="*,12,0.95*" RowDefinitions="*">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Spacing="12">
                     <Border Classes="Card" Height="140">
@@ -145,13 +145,16 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <Border Grid.Column="2" Classes="Card">
+            <Border Grid.Column="2" Classes="Card" ClipToBounds="True">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                        <TextBlock Classes="Caps" Text="THIS SESSION — LAST 8 LAPS"/>
+                        <TextBlock Classes="Caps" Text="THIS SESSION — LAST 100 LAPS"/>
                         <TextBlock Text="{Binding BestLapText}" FontSize="11" FontWeight="Bold"
                                    Foreground="{StaticResource GreenBrush}" HorizontalAlignment="Right"/>
                     </DockPanel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Classes="HudScroll">
                     <ItemsControl ItemsSource="{Binding RecentLapRows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:LapRow">
@@ -174,6 +177,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    </ScrollViewer>
                 </DockPanel>
             </Border>
         </Grid>

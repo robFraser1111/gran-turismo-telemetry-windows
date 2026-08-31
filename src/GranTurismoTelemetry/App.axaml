@@ -93,5 +93,32 @@
         <Style Selector="ScrollViewer">
             <Setter Property="Background" Value="Transparent"/>
         </Style>
+        <Style Selector="ScrollViewer.HudScroll">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ScrollViewer.HudScroll ScrollBar">
+            <Setter Property="AllowAutoHide" Value="True"/>
+        </Style>
+        <Style Selector="ScrollViewer.HudScroll ScrollBar:vertical">
+            <Setter Property="Width" Value="6"/>
+            <Setter Property="MinWidth" Value="6"/>
+            <Setter Property="MaxWidth" Value="6"/>
+        </Style>
+        <Style Selector="ScrollViewer.HudScroll ScrollBar:horizontal">
+            <Setter Property="Height" Value="6"/>
+            <Setter Property="MinHeight" Value="6"/>
+            <Setter Property="MaxHeight" Value="6"/>
+        </Style>
+        <Style Selector="ScrollViewer.HudScroll ScrollBar /template/ RepeatButton">
+            <Setter Property="IsVisible" Value="False"/>
+            <Setter Property="Width" Value="0"/>
+            <Setter Property="Height" Value="0"/>
+        </Style>
+        <Style Selector="ScrollViewer.HudScroll ScrollBar /template/ Thumb">
+            <Setter Property="Background" Value="#3A4A63"/>
+        </Style>
+        <Style Selector="ScrollViewer.HudScroll ScrollBar /template/ Thumb:pointerover">
+            <Setter Property="Background" Value="#8B97AB"/>
+        </Style>
     </Application.Styles>
 </Application>

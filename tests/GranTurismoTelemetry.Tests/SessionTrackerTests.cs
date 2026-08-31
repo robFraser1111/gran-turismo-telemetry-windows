@@ -38,16 +38,45 @@ public class SessionTrackerTests
     }
 
     [Fact]
-    public void CapsTableAtEightNewestFirst()
+    public void CapsTableAtMaxLapsNewestFirst()
     {
         var s = new SessionTracker();
-        s.Ingest(Pkt(1, 90_000, 90_000, 80, 100));
-        for (int lap = 2; lap <= 12; lap++)
-            s.Ingest(Pkt(lap, 84_000 + lap, 84_000, 80 - lap, 100));
+        s.Ingest(Racing(1, 90_000, 90_000, 80));
+        int lastRecorded = SessionTracker.MaxLaps + 3;
+        for (int lap = 2; lap <= lastRecorded + 1; lap++)
+            s.Ingest(Racing(lap, 84_000 + lap, 84_000, 80));
 
-        Assert.Equal(8, s.LapsInMemory);
-        Assert.Equal(11, s.Laps[0].Number);
-        Assert.Equal(4, s.Laps[^1].Number);
+        Assert.Equal(SessionTracker.MaxLaps, s.LapsInMemory);
+        Assert.Equal(lastRecorded, s.Laps[0].Number);
+        Assert.Equal(lastRecorded - SessionTracker.MaxLaps + 1, s.Laps[^1].Number);
+    }
+
+    [Fact]
+    public void MaxLapsPlusOneEvictsOldestAndRelabelMinsRemaining()
+    {
+        var s = new SessionTracker();
+        // Lap 1 is uniquely fast so it is session best; it will be the first evicted.
+        s.Ingest(Racing(1, 90_000, 90_000, 80));
+        s.Ingest(Racing(2, 70_000, 70_000, 79));
+        Assert.Equal(1, s.LapsInMemory);
+        Assert.Equal(70_000, s.SessionBestMs);
+
+        for (int lap = 3; lap <= SessionTracker.MaxLaps + 1; lap++)
+            s.Ingest(Racing(lap, 90_000, 70_000, 78));
+
+        Assert.Equal(SessionTracker.MaxLaps, s.LapsInMemory);
+        Assert.Equal(1, s.Laps[^1].Number);
+        Assert.Equal(70_000, s.SessionBestMs);
+
+        s.Ingest(Racing(SessionTracker.MaxLaps + 2, 88_000, 70_000, 77));
+
+        Assert.Equal(SessionTracker.MaxLaps, s.LapsInMemory);
+        Assert.Equal(SessionTracker.MaxLaps + 1, s.Laps[0].Number);
+        Assert.Equal(2, s.Laps[^1].Number);
+        Assert.DoesNotContain(s.Laps, l => l.Number == 1);
+        Assert.Equal(88_000, s.SessionBestMs);
+        Assert.True(s.Laps[0].IsBest);
+        Assert.All(s.Laps.Skip(1), l => Assert.False(l.IsBest));
     }
 
     [Fact]
@@ -119,7 +148,7 @@ public class SessionTrackerTests
     {
         var s = new SessionTracker();
         s.Seed(SampleSessions.All[0].LapRows);
-        Assert.Equal(8, s.LapsInMemory);
+        Assert.Equal(100, s.LapsInMemory);
         Assert.True(s.Laps[0].IsLatest);
         Assert.Equal(84_539, s.SessionBestMs);
     }

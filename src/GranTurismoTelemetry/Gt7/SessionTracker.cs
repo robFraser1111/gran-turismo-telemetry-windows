@@ -8,7 +8,7 @@ namespace GranTurismoTelemetry.Gt7;
 /// </summary>
 public sealed class SessionTracker
 {
-    public const int MaxLapsShown = 8;
+    public const int MaxLaps = 100; // this-session keep-limit for the pit-wall table
 
     private readonly List<LapRow> _laps = [];
     private readonly List<double> _fuelPerLap = [];
@@ -58,7 +58,7 @@ public sealed class SessionTracker
     public void Seed(IEnumerable<LapRow> rows)
     {
         _laps.Clear();
-        foreach (var row in rows.Take(MaxLapsShown))
+        foreach (var row in rows.Take(MaxLaps))
             _laps.Add(row);
         Relabel();
         if (_laps.Count > 0)
@@ -204,7 +204,7 @@ public sealed class SessionTracker
         // Newest first. Drop duplicate lap numbers from a re-record.
         _laps.RemoveAll(l => l.Number == number);
         _laps.Insert(0, row);
-        while (_laps.Count > MaxLapsShown)
+        while (_laps.Count > MaxLaps)
             _laps.RemoveAt(_laps.Count - 1);
 
         Relabel();
