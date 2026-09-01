@@ -23,9 +23,9 @@ internal static class CrashDialog
             // Never let reporting replace the local crash UI.
         }
 
-        string caption = "Slick";
+        string caption = "SlickDash";
         string text =
-            "Slick hit an unexpected error.\n\n" +
+            "SlickDash hit an unexpected error.\n\n" +
             ex.GetType().Name + ": " + ex.Message;
 
         try

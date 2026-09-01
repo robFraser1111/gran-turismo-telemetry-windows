@@ -1,4 +1,4 @@
-# Slick (Windows)
+# SlickDash (Windows)
 
 Native **.NET 8 + Avalonia** desktop companion for **Gran Turismo 7** live telemetry (Figma v2).
 
