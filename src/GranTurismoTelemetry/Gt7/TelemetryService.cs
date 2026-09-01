@@ -73,8 +73,7 @@ public sealed class TelemetryService
     public void ApplySource(AppSettings settings)
     {
         if (settings.UseSimulator) StartSimulator();
-        else if (!string.IsNullOrWhiteSpace(settings.Ps5IP)) StartUdp(settings.Ps5IP, discover: false);
-        else Disconnect();
+        else FindPs5();
     }
 
     public void Connect(AppSettings settings)
