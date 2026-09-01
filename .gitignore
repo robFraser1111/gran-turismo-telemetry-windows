@@ -13,3 +13,5 @@ artifacts/
 .DS_Store
 *.DotSettings.user
 publish/
+*.exe
+*.pdb
