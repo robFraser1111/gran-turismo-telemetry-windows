@@ -23,9 +23,9 @@ internal static class CrashDialog
             // Never let reporting replace the local crash UI.
         }
 
-        string caption = "Gran Telemetry";
+        string caption = "Slick";
         string text =
-            "Gran Telemetry hit an unexpected error.\n\n" +
+            "Slick hit an unexpected error.\n\n" +
             ex.GetType().Name + ": " + ex.Message;
 
         try
