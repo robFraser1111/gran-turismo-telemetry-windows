@@ -84,6 +84,7 @@ public sealed class TelemetrySimulator
             rpm = Math.Clamp(rpm, 900.0, 8800.0);
 
             double liveDelta = -0.342 + 0.22 * Math.Sin(t * 2 * Math.PI) + 0.05 * Math.Sin(t * 14 * Math.PI);
+            // Closed ellipse around origin so the session-best ghost can match XZ without a PS5.
             double angle = t * 2 * Math.PI;
             float posX = (float)(420 * Math.Cos(angle));
             float posZ = (float)(260 * Math.Sin(angle));

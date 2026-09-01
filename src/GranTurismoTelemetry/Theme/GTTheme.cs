@@ -34,7 +34,7 @@ public static class GTTheme
 
     public static Color DeltaColor(double seconds)
     {
-        if (Math.Abs(seconds) < 0.0005) return Muted;
+        if (double.IsNaN(seconds) || Math.Abs(seconds) < 0.0005) return Muted;
         return seconds < 0 ? Green : Red;
     }
 

@@ -261,7 +261,7 @@ public sealed class TelemetryService
             bool racing = next.IsRacing || fromSimulator;
             Append(ThrottleTrace, racing ? next.ThrottleNorm : 0);
             Append(BrakeTrace, racing ? next.BrakeNorm : 0);
-            Append(DeltaTrace, racing ? next.LiveDeltaSeconds : 0);
+            Append(DeltaTrace, racing && !double.IsNaN(next.LiveDeltaSeconds) ? next.LiveDeltaSeconds : 0);
             Updated?.Invoke();
         });
     }
