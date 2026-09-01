@@ -7,17 +7,17 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <ApplicationTitle>Gran Telemetry</ApplicationTitle>
-    <ApplicationIcon>Assets\gran-telemetry.ico</ApplicationIcon>
+    <ApplicationTitle>SlickDash</ApplicationTitle>
+    <ApplicationIcon>Assets\slick.ico</ApplicationIcon>
     <RootNamespace>GranTurismoTelemetry</RootNamespace>
     <AssemblyName>GranTurismoTelemetry</AssemblyName>
     <Version>0.9.0</Version>
     <AssemblyVersion>0.9.0</AssemblyVersion>
     <FileVersion>0.9.0</FileVersion>
     <InformationalVersion>0.9.0</InformationalVersion>
-    <Company>Gran Telemetry</Company>
-    <Product>Gran Telemetry</Product>
-    <Copyright>© 2026 Gran Telemetry</Copyright>
+    <Company>SlickDash</Company>
+    <Product>SlickDash</Product>
+    <Copyright>© 2026 SlickDash</Copyright>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>

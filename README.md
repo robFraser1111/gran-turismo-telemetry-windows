@@ -1,6 +1,8 @@
-# Gran Telemetry (Windows)
+# SlickDash (Windows)
 
 Native **.NET 8 + Avalonia** desktop companion for **Gran Turismo 7** live telemetry (Figma v2).
+
+Not affiliated with Sony Interactive Entertainment or Polyphony Digital.
 
 A single resizable window. **Simple is the default**, including when maximized. Switch views from the **View** menu only (Simple / Driving / Pit wall — no Auto). Last view is persisted in `settings.json`.
 
