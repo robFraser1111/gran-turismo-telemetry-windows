@@ -11,7 +11,7 @@
     ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>SlickDash</DisplayName>
-    <PublisherDisplayName>SlickDash</PublisherDisplayName>
+    <PublisherDisplayName>Rob Fraser</PublisherDisplayName>
     <Logo>Images\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>
