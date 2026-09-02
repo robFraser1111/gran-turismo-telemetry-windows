@@ -48,13 +48,34 @@ try {
     $exe = Join-Path $stage "GranTurismoTelemetry.exe"
     if (-not (Test-Path $exe)) { throw "Payload is missing GranTurismoTelemetry.exe" }
 
-    $sdkBin = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Directory -ErrorAction SilentlyContinue |
-        Sort-Object Name -Descending |
-        Select-Object -First 1
-    if (-not $sdkBin) { throw "Windows SDK not found (need makeappx.exe on windows-latest)" }
-    $makeappx = Join-Path $sdkBin.FullName "x64\makeappx.exe"
-    $makepri = Join-Path $sdkBin.FullName "x64\makepri.exe"
-    if (-not (Test-Path $makeappx)) { throw "makeappx.exe not at $makeappx" }
+    $kitBin = Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin"
+    $makeappx = $null
+    $makepri = $null
+    if (Test-Path $kitBin) {
+        $versionDirs = @(Get-ChildItem $kitBin -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^\d+\.\d+' } |
+            Sort-Object Name -Descending)
+        foreach ($dir in $versionDirs) {
+            $candidate = Join-Path $dir.FullName "x64\makeappx.exe"
+            if (Test-Path $candidate) {
+                $makeappx = $candidate
+                $pri = Join-Path $dir.FullName "x64\makepri.exe"
+                if (Test-Path $pri) { $makepri = $pri }
+                break
+            }
+        }
+        if (-not $makeappx) {
+            $found = Get-ChildItem $kitBin -Recurse -Filter makeappx.exe -ErrorAction SilentlyContinue |
+                Where-Object { $_.DirectoryName -match '[\\/]x64$' } |
+                Select-Object -First 1
+            if ($found) {
+                $makeappx = $found.FullName
+                $pri = Join-Path $found.DirectoryName "makepri.exe"
+                if (Test-Path $pri) { $makepri = $pri }
+            }
+        }
+    }
+    if (-not $makeappx) { throw "Windows SDK makeappx.exe not found under $kitBin (need a 10.0.*\\x64 kit on windows-latest)" }
 
     if (Test-Path $makepri) {
         $priConfig = Join-Path $stage "priconfig.xml"
