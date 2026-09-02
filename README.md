@@ -22,7 +22,7 @@ Windows 64-bit, no .NET install. Same self-contained exe we publish locally:
 
 The same tag also attaches unsigned SlickDash.msix for sideload. Store upload is the manual **store-submit** Action (draft in Partner Center). See `packaging/README.md`.
 
-Tag `v0.9.1` (or `0.9.1`) and push, or run the **release** Action by hand, and that file updates.
+Tag `v1.0.0` (or `1.0.0`) and push, or run the **release** Action by hand, and that file updates.
 
 ## Screenshots
 
