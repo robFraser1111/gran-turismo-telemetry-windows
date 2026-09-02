@@ -20,7 +20,7 @@ sealed class Program
             options.SendDefaultPii = true;
             options.TracesSampleRate = 1.0;
             options.Release = "gran-telemetry@" +
-                (typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "0.9.0");
+                (typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "1.0.0");
 #if DEBUG
             options.Debug = true;
             options.Environment = "development";

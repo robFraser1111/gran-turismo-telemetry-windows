@@ -8,8 +8,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-if (-not $IdentityName) { $IdentityName = "SlickDash" }
-if (-not $Publisher) { $Publisher = "CN=SlickDash" }
+if (-not $IdentityName) { $IdentityName = "RobFraser.SlickDash" }
+if (-not $Publisher) { $Publisher = "CN=780EEB07-AD4C-450B-9032-B746B84CCBC5" }
 
 function Convert-ToMsixVersion([string]$tag) {
     $t = $tag.Trim()
@@ -36,8 +36,8 @@ try {
     Get-ChildItem $stage -Recurse -Include *.pdb, *.xml | Where-Object { $_.Name -ne "AppxManifest.xml" } | Remove-Item -Force
 
     $manifest = Get-Content -Raw (Join-Path $packaging "AppxManifest.xml")
-    $manifest = $manifest -replace 'Name="SlickDash"', ('Name="' + $IdentityName + '"')
-    $manifest = $manifest -replace 'Publisher="CN=SlickDash"', ('Publisher="' + $Publisher + '"')
+    $manifest = $manifest -replace '(<Identity\s+Name=")[^"]+"', ('${1}' + $IdentityName + '"')
+    $manifest = $manifest -replace '(Publisher=")[^"]+"', ('${1}' + $Publisher + '"')
     $manifest = $manifest -replace 'Version="0.0.0.0"', ('Version="' + $msixVersion + '"')
     Set-Content -Path (Join-Path $stage "AppxManifest.xml") -Value $manifest -Encoding utf8
 
