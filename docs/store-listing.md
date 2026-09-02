@@ -1,6 +1,6 @@
-# SlickDash Microsoft Store listing pack (v1.0.0)
+# SlickDash Microsoft Store listing pack (v1.0.1)
 
-Paste these into Partner Center. Do not put GT, Gran, or Turismo in the **title**. Package: [SlickDash.msix](https://github.com/robFraser1111/gran-turismo-telemetry-windows/releases/download/v1.0.0/SlickDash.msix). Store-sized images are in `docs/store/`.
+Paste these into Partner Center. Do not put GT, Gran, or Turismo in the **title**. Package: [SlickDash.msix](https://github.com/robFraser1111/gran-turismo-telemetry-windows/releases/download/v1.0.1/SlickDash.msix). Store-sized images are in `docs/store/`.
 
 Privacy policy URL (after GitHub Pages is live):
 
@@ -124,7 +124,7 @@ Expected result: **Everyone** / PEGI 3 / similar.
 2. Pricing and availability: Free, all markets you want, public visibility.
 3. Properties: category, privacy URL, support URL, desktop only.
 4. Age ratings: run the questionnaire with the answers above.
-5. Packages: upload SlickDash.msix from the v1.0.0 GitHub Release. If Publisher display name mismatches, Partner Center will say so; the package Publisher CN is already `CN=780EEB07-AD4C-450B-9032-B746B84CCBC5`.
+5. Packages: upload SlickDash.msix from the v1.0.0 GitHub Release. If Publisher display name mismatches, Partner Center will say so; the package Publisher CN is `CN=780EEB07-AD4C-450B-9032-B746B84CCBC5` and PublisherDisplayName is `Rob Fraser`.
 6. Store listing: paste description, features, three screenshots, 300×300 tile, optional hero.
 7. Submission options: no limited audience unless you want a private flight first.
 8. Submit.
