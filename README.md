@@ -77,7 +77,7 @@ The app starts idle. Turn on **Debug → Open debug → Simulator telemetry** fo
 
 1. PS5 and PC on the **same LAN**.
 2. Launch GT7 and sit in a car (garage / menus do not stream).
-3. Tap **Find PS5** (broadcasts heartbeat ASCII A to 255.255.255.255:33739 and locks onto the first valid GT7 packet source) **or** enter the PS5 IP and **Connect**.
+3. Launch the app — it searches the LAN for GT7 automatically. **File → Find PS5** searches again; **Connect to IP** if broadcast misses.
 4. Allow inbound UDP **33740** through Windows Firewall if prompted.
 
 Protocol:
